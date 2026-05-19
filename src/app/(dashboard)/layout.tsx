@@ -30,13 +30,13 @@ import { useTheme } from "next-themes";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/dashboard/leads", label: "Leads", icon: Users },
-  { href: "/dashboard/pipeline", label: "Pipeline", icon: KanbanSquare },
-  { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/dashboard/time-tracker", label: "Time Tracker", icon: Clock },
-  { href: "/dashboard/messages", label: "Messages", icon: MessageSquare },
-  { href: "/dashboard/automations", label: "Automations", icon: Zap },
-  { href: "/dashboard/settings", label: "Settings", icon: Settings },
+  { href: "/leads", label: "Leads", icon: Users },
+  { href: "/pipeline", label: "Pipeline", icon: KanbanSquare },
+  { href: "/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/time-tracker", label: "Time Tracker", icon: Clock },
+  { href: "/messages", label: "Messages", icon: MessageSquare },
+  { href: "/automations", label: "Automations", icon: Zap },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export default function DashboardLayout({
