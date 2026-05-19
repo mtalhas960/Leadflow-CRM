@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { auth, db } from "@/lib/firebase/client";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
@@ -14,7 +13,6 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
 export default function RegisterPage() {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -22,8 +20,8 @@ export default function RegisterPage() {
     password: "",
   });
 
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleRegister = async (e?: React.FormEvent | React.MouseEvent) => {
+    if (e) e.preventDefault();
     if (formData.password.length < 8) {
       toast.error("Password must be at least 8 characters");
       return;
@@ -59,11 +57,13 @@ export default function RegisterPage() {
       });
 
       toast.success("Account created successfully");
-      router.push("/");
+      // Use setTimeout to ensure toast renders before navigation
+      setTimeout(() => {
+        window.location.href = "/dashboard";
+      }, 500);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Registration failed";
       toast.error(message);
-    } finally {
       setLoading(false);
     }
   };
@@ -78,7 +78,7 @@ export default function RegisterPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleRegister} className="space-y-4">
+          <form className="space-y-4" noValidate>
             <div className="space-y-2">
               <Label htmlFor="name">Name</Label>
               <Input
@@ -120,7 +120,7 @@ export default function RegisterPage() {
                 Must be at least 8 characters
               </p>
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="button" className="w-full" disabled={loading} onClick={handleRegister}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Create Account
             </Button>

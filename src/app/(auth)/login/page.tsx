@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { auth, db } from "@/lib/firebase/client";
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
@@ -15,21 +14,21 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({ email: "", password: "" });
 
-  const handleEmailLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleEmailLogin = async (e?: React.FormEvent | React.MouseEvent) => {
+    if (e) e.preventDefault();
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, formData.email, formData.password);
       toast.success("Logged in successfully");
-      router.push("/");
+      setTimeout(() => {
+        window.location.href = "/dashboard";
+      }, 500);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Login failed";
       toast.error(message);
-    } finally {
       setLoading(false);
     }
   };
@@ -64,11 +63,12 @@ export default function LoginPage() {
         });
       }
       toast.success("Logged in with Google");
-      router.push("/");
+      setTimeout(() => {
+        window.location.href = "/dashboard";
+      }, 500);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Google login failed";
       toast.error(message);
-    } finally {
       setLoading(false);
     }
   };
@@ -83,7 +83,7 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleEmailLogin} className="space-y-4">
+          <form className="space-y-4" noValidate>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -109,7 +109,7 @@ export default function LoginPage() {
                 required
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="button" className="w-full" disabled={loading} onClick={handleEmailLogin}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Sign In
             </Button>
