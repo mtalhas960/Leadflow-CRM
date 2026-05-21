@@ -328,6 +328,8 @@ export default function AnalyticsPage() {
                     paddingAngle={2}
                     dataKey="value"
                     label={({ name, value }) => `${name}: ${value}`}
+                    fill="hsl(var(--foreground))"
+                    fontSize={11}
                   >
                     {pipelineData.map((entry, index) => (
                       <Cell
@@ -420,6 +422,8 @@ export default function AnalyticsPage() {
                     paddingAngle={2}
                     dataKey="value"
                     label={({ name, value }) => `${name}: ${value}`}
+                    fill="hsl(var(--foreground))"
+                    fontSize={11}
                   >
                     {sourceData.map((entry, index) => (
                       <Cell

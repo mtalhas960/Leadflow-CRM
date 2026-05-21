@@ -15,13 +15,22 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useLeadStore } from "@/lib/stores/leadStore";
 import { useWorkspace } from "@/contexts/workspace-context";
+import { updateWorkspace } from "@/lib/firebase/workspaces";
 import { DEFAULT_PIPELINE_STAGES } from "@/lib/constants";
 import { formatCurrency, getInitials } from "@/lib/utils";
-import { StatusBadge } from "@/components/shared/status-badge";
 import { ScoreBadge } from "@/components/leads/score-badge";
 import { ActivityTimeline } from "@/components/leads/activity-timeline";
 import { EmailComposer, EmailHistory } from "@/components/leads/email-composer";
@@ -43,25 +52,6 @@ import {
 } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import { DocumentManager } from "@/components/leads/document-manager";
-
-type LeadStatusType =
-  | "New"
-  | "Contacted"
-  | "Qualified"
-  | "Proposal"
-  | "Negotiation"
-  | "Won"
-  | "Lost";
-
-const statusLabelMap: Record<string, LeadStatusType> = {
-  new: "New",
-  contacted: "Contacted",
-  qualified: "Qualified",
-  proposal: "Proposal",
-  negotiation: "Negotiation",
-  won: "Won",
-  lost: "Lost",
-};
 
 interface LeadDetailProps {
   leadId: string;
@@ -107,6 +97,9 @@ export function LeadDetail({ leadId }: LeadDetailProps) {
   const [loadingEmails, setLoadingEmails] = useState(false);
   const [emailEvents, setEmailEvents] = useState<EmailEvent[]>([]);
   const [addingToCalendar, setAddingToCalendar] = useState(false);
+  const [newStatusDialogOpen, setNewStatusDialogOpen] = useState(false);
+  const [newStatusName, setNewStatusName] = useState("");
+  const [newStatusColor, setNewStatusColor] = useState("#3b82f6");
 
   useEffect(() => {
     setLoading(true);
@@ -209,6 +202,28 @@ export function LeadDetail({ leadId }: LeadDetailProps) {
     }
   };
 
+  const handleAddNewStatus = async () => {
+    if (!newStatusName.trim() || !activeWorkspace) return;
+    const stages = activeWorkspace?.pipeline?.stages || DEFAULT_PIPELINE_STAGES;
+    const newStage = {
+      id: newStatusName.toLowerCase().replace(/\s+/g, "-"),
+      name: newStatusName.trim(),
+      color: newStatusColor,
+      probability: 0,
+      order: stages.length,
+    };
+    const updatedStages = [...stages, newStage];
+    try {
+      await updateWorkspace(activeWorkspace.id, { pipeline: { stages: updatedStages } });
+      toast.success(`Status "${newStage.name}" added`);
+      setNewStatusName("");
+      setNewStatusColor("#3b82f6");
+      setNewStatusDialogOpen(false);
+    } catch {
+      toast.error("Failed to add status");
+    }
+  };
+
   if (loading) {
     return <LeadDetailSkeleton />;
   }
@@ -240,9 +255,44 @@ export function LeadDetail({ leadId }: LeadDetailProps) {
             </p>
           )}
           <div className="flex items-center gap-2 mt-2">
-            <StatusBadge
-              status={statusLabelMap[lead.status] ?? "New"}
-            />
+            <Select value={lead.status} onValueChange={handleStatusChange}>
+              <SelectTrigger className="w-fit h-6 px-2.5 py-0 text-xs font-medium border-0 shadow-none hover:opacity-80 focus:ring-0 bg-muted/50 rounded-full">
+                {(() => {
+                  const currentStage = stages.find((s) => s.id === lead.status);
+                  return (
+                    <span className="flex items-center gap-1.5">
+                      <span
+                        className="inline-block h-2 w-2 rounded-full"
+                        style={{ backgroundColor: currentStage?.color || "#94a3b8" }}
+                      />
+                      {currentStage?.name || lead.status}
+                    </span>
+                  );
+                })()}
+              </SelectTrigger>
+              <SelectContent>
+                {stages.map((stage) => (
+                  <SelectItem key={stage.id} value={stage.id}>
+                    <span className="flex items-center gap-2">
+                      <span
+                        className="inline-block h-2.5 w-2.5 rounded-full"
+                        style={{ backgroundColor: stage.color }}
+                      />
+                      {stage.name}
+                    </span>
+                  </SelectItem>
+                ))}
+                <Separator className="my-1" />
+                <SelectItem
+                  value="__add_new__"
+                  className="text-primary font-medium"
+                  onSelect={(e) => e.preventDefault()}
+                  onClick={() => setNewStatusDialogOpen(true)}
+                >
+                  + Add new status
+                </SelectItem>
+              </SelectContent>
+            </Select>
             {lead.value && (
               <Badge variant="outline" className="font-medium">
                 {formatCurrency(lead.value, lead.currency)}
@@ -260,23 +310,6 @@ export function LeadDetail({ leadId }: LeadDetailProps) {
       </div>
 
       <Separator />
-
-      {/* Status Change */}
-      <div className="flex items-center gap-3">
-        <span className="text-sm font-medium">Move to:</span>
-        <Select value={lead.status} onValueChange={handleStatusChange}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {(activeWorkspace?.pipeline?.stages || DEFAULT_PIPELINE_STAGES).map((stage) => (
-              <SelectItem key={stage.id} value={stage.id}>
-                {stage.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
 
       {/* Follow-up Calendar Button */}
       {lead.nextFollowUpAt && (
@@ -552,6 +585,53 @@ export function LeadDetail({ leadId }: LeadDetailProps) {
         open={emailDialogOpen}
         onOpenChange={setEmailDialogOpen}
       />
+
+      <Dialog open={newStatusDialogOpen} onOpenChange={setNewStatusDialogOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Add New Status</DialogTitle>
+            <DialogDescription>
+              Create a custom pipeline stage for your workspace.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="status-name">Status name</Label>
+              <Input
+                id="status-name"
+                placeholder="e.g. On Hold"
+                value={newStatusName}
+                onChange={(e) => setNewStatusName(e.target.value)}
+                autoFocus
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Color</Label>
+              <div className="flex gap-2 flex-wrap">
+                {["#3b82f6", "#eab308", "#f97316", "#a855f7", "#ef4444", "#22c55e", "#6b7280", "#06b6d4"].map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    className={`h-8 w-8 rounded-full border-2 transition-all ${
+                      newStatusColor === color ? "border-foreground scale-110" : "border-transparent"
+                    }`}
+                    style={{ backgroundColor: color }}
+                    onClick={() => setNewStatusColor(color)}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNewStatusDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddNewStatus} disabled={!newStatusName.trim()}>
+              Add Status
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
