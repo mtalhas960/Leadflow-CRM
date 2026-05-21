@@ -16,8 +16,13 @@ import { LeadForm } from "@/components/leads/lead-form";
 import { LeadDetail } from "@/components/leads/lead-detail";
 import { CsvImportDialog } from "@/components/leads/csv-import-dialog";
 import { LeadFilters } from "@/components/leads/lead-filters";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { StatusBadge } from "@/components/shared/status-badge";
 import { SkeletonTable } from "@/components/skeletons/skeleton-table";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PageHeader } from "@/components/shared/page-header";
@@ -53,25 +58,6 @@ import {
 import { calculateLeadScore, type ScoreBreakdown } from "@/lib/lead-scoring";
 import { getEmailsForWorkspace, type EmailRecord } from "@/lib/firebase/emails";
 import { ExportButton } from "@/components/shared/export-button";
-
-type LeadStatusType =
-  | "New"
-  | "Contacted"
-  | "Qualified"
-  | "Proposal"
-  | "Negotiation"
-  | "Won"
-  | "Lost";
-
-const statusLabelMap: Record<string, LeadStatusType> = {
-  new: "New",
-  contacted: "Contacted",
-  qualified: "Qualified",
-  proposal: "Proposal",
-  negotiation: "Negotiation",
-  won: "Won",
-  lost: "Lost",
-};
 
 export default function LeadsPage() {
   const { user, activeWorkspace } = useWorkspace();
@@ -268,7 +254,7 @@ export default function LeadsPage() {
             stages={stages}
             sources={sources}
             niches={niches}
-            statusLabels={statusLabelMap}
+            statusLabels={Object.fromEntries(stages.map((s) => [s.id, s.name]))}
           />
         </div>
       </div>
@@ -419,9 +405,35 @@ export default function LeadsPage() {
                       )}
                     </td>
                     <td className="px-4 py-3 hidden lg:table-cell">
-                      <StatusBadge
-                        status={statusLabelMap[lead.status] ?? "New"}
-                      />
+                      <Select value={lead.status} onValueChange={(v) => handleStatusChange(lead.id, v)}>
+                        <SelectTrigger className="w-fit h-6 px-2 py-0 text-xs font-medium border-0 shadow-none hover:opacity-80 focus:ring-0 bg-muted/50 rounded-full">
+                          {(() => {
+                            const stage = stages.find((s) => s.id === lead.status);
+                            return (
+                              <span className="flex items-center gap-1.5">
+                                <span
+                                  className="inline-block h-2 w-2 rounded-full"
+                                  style={{ backgroundColor: stage?.color || "#94a3b8" }}
+                                />
+                                {stage?.name || lead.status}
+                              </span>
+                            );
+                          })()}
+                        </SelectTrigger>
+                        <SelectContent>
+                          {stages.map((stage) => (
+                            <SelectItem key={stage.id} value={stage.id}>
+                              <span className="flex items-center gap-2">
+                                <span
+                                  className="inline-block h-2.5 w-2.5 rounded-full"
+                                  style={{ backgroundColor: stage.color }}
+                                />
+                                {stage.name}
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </td>
                     <td className="px-4 py-3 text-sm font-medium hidden lg:table-cell">
                       {lead.value
