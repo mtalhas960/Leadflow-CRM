@@ -34,6 +34,8 @@ import { DEFAULT_PIPELINE_STAGES, LEAD_SOURCES } from "@/lib/constants";
 import type { PipelineStage } from "@/types";
 import { formatCurrency } from "@/lib/utils";
 import { TrendingUp, TrendingDown, Users, DollarSign, Target, Mail, Phone, Download } from "lucide-react";
+import { ExportButton } from "@/components/shared/export-button";
+import type { AnalyticsMetrics } from "@/lib/export";
 
 const COLORS = [
   "hsl(212 72% 58%)",
@@ -138,6 +140,19 @@ export default function AnalyticsPage() {
     .reduce((sum, l) => sum + (l.value || 0), 0);
   const avgDealSize = wonLeads > 0 ? wonValue / wonLeads : 0;
 
+  const analyticsMetrics: AnalyticsMetrics = {
+    totalLeads,
+    wonLeads,
+    lostLeads,
+    conversionRate,
+    totalValue,
+    activeDeals,
+    wonValue,
+    avgDealSize,
+    dateRange: DATE_RANGES.find((r) => r.days === dateRange)?.label || "Last 30 days",
+    generatedAt: new Date().toLocaleDateString(),
+  };
+
   // Top leads by value
   const topLeads = useMemo(() =>
     [...filteredLeads]
@@ -194,21 +209,24 @@ export default function AnalyticsPage() {
         title="Analytics"
         description="Insights into your CRM performance."
         actions={
-          <Select
-            value={dateRange.toString()}
-            onValueChange={(v) => setDateRange(parseInt(v))}
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {DATE_RANGES.map((range) => (
-                <SelectItem key={range.days} value={range.days.toString()}>
-                  {range.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <ExportButton type="analytics" data={analyticsMetrics} />
+            <Select
+              value={dateRange.toString()}
+              onValueChange={(v) => setDateRange(parseInt(v))}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {DATE_RANGES.map((range) => (
+                  <SelectItem key={range.days} value={range.days.toString()}>
+                    {range.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         }
       />
 
