@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120" role="img" aria-label="LeadFlow logo">
+  <defs>
+    <linearGradient id="leadflow-gradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </linearGradient>
+  </defs>
+  <rect width="120" height="120" rx="22" fill="url(#leadflow-gradient)" />
+  <text
+    x="60"
+    y="74"
+    text-anchor="middle"
+    font-family="Plus Jakarta Sans, Arial, sans-serif"
+    font-size="48"
+    font-weight="700"
+    fill="#ffffff"
+  >
+    LF
+  </text>
+</svg>

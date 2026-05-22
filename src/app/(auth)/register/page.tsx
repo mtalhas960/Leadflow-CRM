@@ -1,16 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
 import { auth, db } from "@/lib/firebase/client";
+import { DEFAULT_PIPELINE_STAGES } from "@/lib/firebase/workspaces";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { doc, setDoc, Timestamp } from "firebase/firestore";
-import { DEFAULT_PIPELINE_STAGES } from "@/lib/firebase/workspaces";
+import Link from "next/link";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/lib/toast";
 
 export default function RegisterPage() {
@@ -215,6 +215,17 @@ export default function RegisterPage() {
               >
                 Sign in
               </Link>
+            </p>
+            <p className="text-center text-xs text-muted-foreground">
+              By creating an account, you agree to our{" "}
+              <Link href="/terms" className="font-medium text-primary hover:underline">
+                Terms of Service
+              </Link>
+              {" "}and{" "}
+              <Link href="/privacy" className="font-medium text-primary hover:underline">
+                Privacy Policy
+              </Link>
+              .
             </p>
           </CardContent>
         </Card>

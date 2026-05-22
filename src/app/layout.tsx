@@ -1,9 +1,9 @@
-import type { Metadata } from "next";
-import { Inter, Plus_Jakarta_Sans } from "next/font/google";
-import "./globals.css";
 import { ThemeProvider } from "@/components/shared/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import type { Metadata } from "next";
+import { Inter, Plus_Jakarta_Sans } from "next/font/google";
+import "./globals.css";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -25,6 +25,10 @@ export const metadata: Metadata = {
     "A modern, lightweight CRM for freelancers, small teams, and agencies. Manage leads, track outreach, and analyze performance.",
   keywords: ["CRM", "time tracker", "lead management", "open source", "sales pipeline"],
   authors: [{ name: "LeadFlow Contributors" }],
+  applicationName: "LeadFlow",
+  icons: {
+    icon: "/branding/leadflow-logo.svg",
+  },
 };
 
 export default function RootLayout({

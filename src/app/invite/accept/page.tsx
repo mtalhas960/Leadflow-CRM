@@ -1,21 +1,21 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { auth, db } from "@/lib/firebase/client";
+import { acceptInvite, getWorkspace } from "@/lib/firebase/workspaces";
+import { toast } from "@/lib/toast";
 import {
   createUserWithEmailAndPassword,
   updateProfile,
 } from "firebase/auth";
 import { doc, setDoc, Timestamp } from "firebase/firestore";
-import { acceptInvite, getWorkspace } from "@/lib/firebase/workspaces";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, CheckCircle2, XCircle, Mail, Lock, User, Building2, Shield } from "lucide-react";
-import { toast } from "@/lib/toast";
+import { Building2, CheckCircle2, Loader2, Lock, Mail, Shield, User, XCircle } from "lucide-react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 
 interface InviteDetails {
   workspaceId: string;
@@ -388,14 +388,21 @@ function AcceptInviteContent() {
           </p>
 
           <p className="text-center text-xs text-muted-foreground">
-            By creating an account, you agree to our Terms of Service
-            and Privacy Policy.
+            By creating an account, you agree to our{" "}
+            <Link href="/terms" className="font-medium text-primary hover:underline">
+              Terms of Service
+            </Link>
+            {" "}and{" "}
+            <Link href="/privacy" className="font-medium text-primary hover:underline">
+              Privacy Policy
+            </Link>
+            .
           </p>
         </div>
       </div>
     </div>
-    );
-  }
+  );
+}
 
 // ─── Fetch full invite details ────────────────────────────────────────────────
 
