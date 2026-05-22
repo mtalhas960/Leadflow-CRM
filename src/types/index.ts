@@ -184,7 +184,7 @@ export interface Message {
   deleted: boolean;
   edited: boolean;
   editedAt?: Timestamp;
-  createdAt: Timestamp;
+  createdAt: Timestamp | null;
 }
 
 export interface Conversation {

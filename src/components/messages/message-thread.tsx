@@ -140,6 +140,7 @@ export function MessageThread({
   };
 
   const formatDateSeparator = (msg: Message): string => {
+    if (!msg.createdAt) return "Just now";
     const d = msg.createdAt.toDate();
     const now = new Date();
     const diffDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));

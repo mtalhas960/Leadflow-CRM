@@ -236,7 +236,7 @@ export function ConversationList({
                         )}
                       </div>
                       <p
-                        className={`mt-0.5 truncate text-xs ${
+                        className={`mt-0.5 truncate text-xs w-max ${
                           hasUnread && !isSelected
                             ? "font-medium text-foreground"
                             : "text-muted-foreground"
