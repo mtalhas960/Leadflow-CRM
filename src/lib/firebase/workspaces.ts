@@ -281,16 +281,25 @@ export async function acceptInvite(
     }
   }
 
-  // Update user's workspaceIds
+  // Update user's workspaceIds and active workspace
   const userRef = doc(db, USERS_COLLECTION, userId);
   const userSnap = await getDoc(userRef);
   if (userSnap.exists()) {
     const userData = userSnap.data();
     const workspaceIds = userData.workspaceIds || [];
+    const updates: Record<string, unknown> = {};
+
     if (!workspaceIds.includes(invite.workspaceId)) {
-      batch.update(userRef, {
-        workspaceIds: [...workspaceIds, invite.workspaceId],
-      });
+      updates.workspaceIds = [...workspaceIds, invite.workspaceId];
+    }
+
+    // Set as active workspace if none is set (newly created invited user)
+    if (!userData.activeWorkspaceId) {
+      updates.activeWorkspaceId = invite.workspaceId;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      batch.update(userRef, updates);
     }
   }
 
