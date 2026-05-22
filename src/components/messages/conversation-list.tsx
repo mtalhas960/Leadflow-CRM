@@ -1,9 +1,17 @@
 "use client";
 
+import { useState } from "react";
+
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
-import { MessageSquare, Users } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MessageSquare, Users, MoreHorizontal, Trash2 } from "lucide-react";
 import { getInitials } from "@/lib/utils";
 import type { Conversation, WorkspaceMember } from "@/types";
 
@@ -50,6 +58,7 @@ interface ConversationListProps {
   memberMap: Map<string, string>;
   onSelectConversation: (conv: Conversation) => void;
   onSelectMember: (member: WorkspaceMember) => void;
+  onDeleteConversation?: (conv: Conversation) => void;
   loading: boolean;
   error: string | null;
 }
@@ -62,9 +71,12 @@ export function ConversationList({
   memberMap,
   onSelectConversation,
   onSelectMember,
+  onDeleteConversation,
   loading,
   error,
 }: ConversationListProps) {
+  const [hoveredConvId, setHoveredConvId] = useState<string | null>(null);
+
   // ─── Loading State ──────────────────────────────────────────────────────
 
   if (loading) {
@@ -172,63 +184,97 @@ export function ConversationList({
               const hasUnread = (conv.unreadCount ?? 0) > 0;
 
               return (
-                <button
+                <div
                   key={conv.id}
-                  onClick={() => onSelectConversation(conv)}
-                  className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-muted/60 ${
+                  className={`group relative flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-muted/60 ${
                     isSelected ? "bg-muted ring-1 ring-inset ring-primary/10" : ""
                   }`}
+                  onMouseEnter={() => setHoveredConvId(conv.id)}
+                  onMouseLeave={() => setHoveredConvId(null)}
                 >
-                  {/* Avatar */}
-                  <div className="relative shrink-0">
-                    <Avatar className="h-9 w-9 border">
-                      <AvatarFallback
-                        className={`text-xs ${
-                          isSelected
-                            ? "bg-primary text-primary-foreground"
-                            : isLead
-                              ? "bg-primary/10 text-primary"
-                              : "bg-amber-500/10 text-amber-600"
-                        }`}
-                      >
-                        {getInitials(name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    {!isLead && !isSelected && (
-                      <Users className="absolute -right-0.5 -top-0.5 h-4 w-4 rounded-full bg-amber-500 p-0.5 text-white ring-2 ring-background" />
-                    )}
-                    {hasUnread && !isSelected && (
-                      <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground ring-2 ring-background">
-                        {conv.unreadCount > 99 ? "99+" : conv.unreadCount}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Content */}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <p
-                        className={`truncate text-sm ${hasUnread && !isSelected ? "font-semibold" : "font-medium"}`}
-                      >
-                        {name}
-                      </p>
-                      {conv.lastMessageAt && (
-                        <span className="shrink-0 text-[11px] text-muted-foreground">
-                          {formatDate(conv.lastMessageAt)}
+                  <button
+                    onClick={() => onSelectConversation(conv)}
+                    className="flex flex-1 items-center gap-3 min-w-0"
+                  >
+                    {/* Avatar */}
+                    <div className="relative shrink-0">
+                      <Avatar className="h-9 w-9 border">
+                        <AvatarFallback
+                          className={`text-xs ${
+                            isSelected
+                              ? "bg-primary text-primary-foreground"
+                              : isLead
+                                ? "bg-primary/10 text-primary"
+                                : "bg-amber-500/10 text-amber-600"
+                          }`}
+                        >
+                          {getInitials(name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      {!isLead && !isSelected && (
+                        <Users className="absolute -right-0.5 -top-0.5 h-4 w-4 rounded-full bg-amber-500 p-0.5 text-white ring-2 ring-background" />
+                      )}
+                      {hasUnread && !isSelected && (
+                        <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground ring-2 ring-background">
+                          {conv.unreadCount > 99 ? "99+" : conv.unreadCount}
                         </span>
                       )}
                     </div>
-                    <p
-                      className={`mt-0.5 truncate text-xs ${
-                        hasUnread && !isSelected
-                          ? "font-medium text-foreground"
-                          : "text-muted-foreground"
-                      }`}
-                    >
-                      {conv.lastMessage || "No messages yet"}
-                    </p>
-                  </div>
-                </button>
+
+                    {/* Content */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <p
+                          className={`truncate text-sm ${hasUnread && !isSelected ? "font-semibold" : "font-medium"}`}
+                        >
+                          {name}
+                        </p>
+                        {conv.lastMessageAt && (
+                          <span className="shrink-0 text-[11px] text-muted-foreground">
+                            {formatDate(conv.lastMessageAt)}
+                          </span>
+                        )}
+                      </div>
+                      <p
+                        className={`mt-0.5 truncate text-xs ${
+                          hasUnread && !isSelected
+                            ? "font-medium text-foreground"
+                            : "text-muted-foreground"
+                        }`}
+                      >
+                        {conv.lastMessage || "No messages yet"}
+                      </p>
+                    </div>
+                  </button>
+
+                  {/* Three-dot menu (hover) */}
+                  {(hoveredConvId === conv.id || isSelected) && onDeleteConversation && (
+                    <div className="shrink-0">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-muted"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MoreHorizontal className="h-3.5 w-3.5" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-40">
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDeleteConversation(conv);
+                            }}
+                          >
+                            <Trash2 className="mr-2 h-3.5 w-3.5" />
+                            Delete chat
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  )}
+                </div>
               );
             })}
           </div>

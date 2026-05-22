@@ -181,6 +181,9 @@ export interface Message {
   senderId: string;
   senderName: string;
   body: string;
+  deleted: boolean;
+  edited: boolean;
+  editedAt?: Timestamp;
   createdAt: Timestamp;
 }
 

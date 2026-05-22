@@ -8,6 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/shared/page-header";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ConversationList } from "@/components/messages/conversation-list";
 import { MessageThread } from "@/components/messages/message-thread";
 import { MessageInput } from "@/components/messages/message-input";
@@ -18,10 +26,13 @@ import {
   subscribeToMessages,
   sendMessage,
   createConversation,
+  deleteConversation,
+  editMessage,
+  deleteMessage,
   fixConversationNames,
 } from "@/lib/firebase/messages";
 import { getWorkspaceMembers } from "@/lib/firebase/workspaces";
-import { Search, Plus, Mail, Users } from "lucide-react";
+import { Search, Plus, Mail, Users, Video } from "lucide-react";
 import { Timestamp } from "firebase/firestore";
 import { toast } from "@/components/ui/sonner";
 import { getInitials } from "@/lib/utils";
@@ -83,6 +94,10 @@ export default function MessagesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [newConvOpen, setNewConvOpen] = useState(false);
   const [newMemberOpen, setNewMemberOpen] = useState(false);
+
+  // Delete conversation
+  const [deleteConvTarget, setDeleteConvTarget] = useState<Conversation | null>(null);
+  const [deletingConv, setDeletingConv] = useState(false);
 
   // ─── Subscribe to conversations (real-time) ─────────────────────────
 
@@ -214,6 +229,71 @@ export default function MessagesPage() {
     [conversations, user]
   );
 
+  // ─── Edit message ─────────────────────────────────────────────────────
+
+  const handleEditMessage = useCallback(
+    async (messageId: string, newBody: string) => {
+      await editMessage(messageId, newBody);
+    },
+    []
+  );
+
+  // ─── Delete message ───────────────────────────────────────────────────
+
+  const handleDeleteMessage = useCallback(
+    async (messageId: string) => {
+      await deleteMessage(messageId);
+      toast.success("Message deleted");
+    },
+    []
+  );
+
+  // ─── Delete conversation ──────────────────────────────────────────────
+
+  const handleDeleteConversation = useCallback(
+    async (conv: Conversation) => {
+      setDeleteConvTarget(conv);
+    },
+    []
+  );
+
+  const handleConfirmDeleteConversation = useCallback(async () => {
+    if (!deleteConvTarget) return;
+    setDeletingConv(true);
+    try {
+      await deleteConversation(deleteConvTarget.id);
+      if (selected?.id === deleteConvTarget.id) {
+        setSelected(null);
+        setMessages([]);
+      }
+      toast.success("Conversation deleted");
+    } catch {
+      toast.error("Failed to delete conversation");
+    } finally {
+      setDeletingConv(false);
+      setDeleteConvTarget(null);
+    }
+  }, [deleteConvTarget, selected]);
+
+  // ─── Send Google Meet link ────────────────────────────────────────────
+
+  const handleSendMeetLink = useCallback(async () => {
+    if (!selected || !user || !activeWorkspace) return;
+    try {
+      const meetUrl = "https://meet.google.com/new";
+      await sendMessage({
+        workspaceId: activeWorkspace.id,
+        conversationId: selected.id,
+        senderId: user.id,
+        senderName: user.displayName || "Unknown",
+        body: `📹 Google Meet — ${meetUrl}`,
+      });
+      toast.success("Meeting link sent");
+    } catch {
+      toast.error("Failed to send meeting link");
+    }
+  }, [selected, user, activeWorkspace]);
+
   // ─── Send message ────────────────────────────────────────────────────
 
   const handleSendMessage = useCallback(
@@ -253,6 +333,8 @@ export default function MessagesPage() {
             senderId: user.id,
             senderName: user.displayName || "Unknown",
             body,
+            deleted: false,
+            edited: false,
             createdAt: Timestamp.now(),
           },
         ]);
@@ -413,6 +495,7 @@ export default function MessagesPage() {
               memberMap={memberMap}
               onSelectConversation={handleSelectConversation}
               onSelectMember={handleSelectMember}
+              onDeleteConversation={handleDeleteConversation}
               loading={convsLoading}
               error={convsError}
             />
@@ -469,14 +552,29 @@ export default function MessagesPage() {
                 currentUserId={user?.id ?? ""}
                 loading={msgsLoading}
                 error={msgsError}
+                onEditMessage={handleEditMessage}
+                onDeleteMessage={handleDeleteMessage}
               />
 
               {/* Input */}
-              <div className="border-t p-4">
-                <MessageInput
-                  onSend={handleSendMessage}
-                  placeholder={`Message ${getConversationName(selected, user?.id || "", memberMap).name.split(" ")[0]}...`}
-                />
+              <div className="border-t px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0"
+                    onClick={handleSendMeetLink}
+                    title="Send Google Meet link"
+                  >
+                    <Video className="h-4 w-4" />
+                  </Button>
+                  <div className="flex-1">
+                    <MessageInput
+                      onSend={handleSendMessage}
+                      placeholder={`Message ${getConversationName(selected, user?.id || "", memberMap).name.split(" ")[0]}...`}
+                    />
+                  </div>
+                </div>
               </div>
             </>
           ) : draftMember ? (
@@ -505,6 +603,8 @@ export default function MessagesPage() {
                 currentUserId={user?.id || ""}
                 loading={false}
                 error={null}
+                onEditMessage={handleEditMessage}
+                onDeleteMessage={handleDeleteMessage}
               />
 
               <div className="border-t p-4">
@@ -567,6 +667,31 @@ export default function MessagesPage() {
           />
         </>
       )}
+
+      {/* Delete conversation dialog */}
+      <Dialog open={!!deleteConvTarget} onOpenChange={() => setDeleteConvTarget(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete conversation?</DialogTitle>
+            <DialogDescription>
+              This will permanently delete the chat and all messages.
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setDeleteConvTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDeleteConversation}
+              disabled={deletingConv}
+            >
+              {deletingConv ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

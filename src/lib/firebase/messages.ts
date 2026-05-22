@@ -5,6 +5,7 @@ import {
   getDoc,
   getDocs,
   updateDoc,
+  deleteDoc,
   query,
   where,
   orderBy,
@@ -138,6 +139,50 @@ export async function sendMessage(data: {
   }
 
   return docRef.id;
+}
+
+// ─── Edit Message ────────────────────────────────────────────────────────────
+
+export async function editMessage(
+  messageId: string,
+  newBody: string
+): Promise<void> {
+  const msgRef = doc(db, MESSAGES_COLLECTION, messageId);
+  await updateDoc(msgRef, {
+    body: newBody,
+    edited: true,
+    editedAt: serverTimestamp(),
+  });
+}
+
+// ─── Delete Message (soft) ───────────────────────────────────────────────────
+
+export async function deleteMessage(messageId: string): Promise<void> {
+  const msgRef = doc(db, MESSAGES_COLLECTION, messageId);
+  await updateDoc(msgRef, {
+    deleted: true,
+    body: "",
+    edited: false,
+  });
+}
+
+// ─── Delete Conversation ─────────────────────────────────────────────────────
+
+export async function deleteConversation(conversationId: string): Promise<void> {
+  // Delete all messages in the conversation
+  const msgsQuery = query(
+    collection(db, MESSAGES_COLLECTION),
+    where("conversationId", "==", conversationId)
+  );
+  const msgsSnapshot = await getDocs(msgsQuery);
+  const batch: Array<Promise<void>> = [];
+  msgsSnapshot.docs.forEach((d) => {
+    batch.push(deleteDoc(doc(db, MESSAGES_COLLECTION, d.id)));
+  });
+  await Promise.all(batch);
+
+  // Delete the conversation document
+  await deleteDoc(doc(db, CONVERSATIONS_COLLECTION, conversationId));
 }
 
 // ─── Create Conversation ─────────────────────────────────────────────────────
