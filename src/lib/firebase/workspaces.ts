@@ -216,7 +216,12 @@ export async function updateMemberRole(
   role: "admin" | "member" | "viewer"
 ): Promise<void> {
   const userRef = doc(db, USERS_COLLECTION, userId);
-  await updateDoc(userRef, { role });
+
+  // Update only the per-workspace role — do NOT touch the top-level role field
+  // (otherwise changing a user's role in one workspace corrupts their role in others)
+  await updateDoc(userRef, {
+    [`workspaceRoles.${workspaceId}`]: role,
+  });
 }
 
 // ─── Leave Workspace ─────────────────────────────────────────────────────────

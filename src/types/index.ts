@@ -19,6 +19,7 @@ export interface User {
   };
   workspaceIds: string[];
   activeWorkspaceId: string | null;
+  workspaceRoles?: Record<string, string>;
   createdAt: Timestamp;
   updatedAt: Timestamp;
   lastActiveAt: Timestamp;

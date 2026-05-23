@@ -22,6 +22,16 @@ import {
 
 const LOCAL_STORAGE_KEY = "leadflow_active_workspace";
 
+/**
+ * Compute the effective role for a user in a specific workspace.
+ * Uses workspaceRoles map first, falls back to top-level role (legacy).
+ */
+function getEffectiveRole(userData: User, workspaceId: string): User["role"] {
+  const workspaceRoles = userData.workspaceRoles || {};
+  const role = workspaceRoles[workspaceId] || userData.role || "viewer";
+  return role as User["role"];
+}
+
 interface WorkspaceContextValue {
   user: User | null;
   workspaces: Workspace[];
@@ -65,13 +75,12 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         const userRef = doc(db, "users", firebaseUser.uid);
         const userSnap = await getDoc(userRef);
         if (userSnap.exists()) {
-          const userData = userSnap.data() as User;
+          const rawUserData = userSnap.data() as User;
           // Always set id from Firestore doc ID (legacy accounts may not store it)
-          if (!userData.id) userData.id = firebaseUser.uid;
-          setUser(userData);
+          if (!rawUserData.id) rawUserData.id = firebaseUser.uid;
 
           // Determine active workspace
-          let targetWorkspaceId = userData.activeWorkspaceId;
+          let targetWorkspaceId = rawUserData.activeWorkspaceId;
 
           // Fallback to localStorage
           if (!targetWorkspaceId) {
@@ -83,15 +92,23 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
           const fetchedWorkspaces = await getUserWorkspaces([firebaseUser.uid]);
           setWorkspaces(fetchedWorkspaces);
 
-          // Validate active workspace is in user's workspaces
+          // Resolve the active workspace
+          let resolvedWorkspace: Workspace | null = null;
           if (targetWorkspaceId && fetchedWorkspaces.find((w) => w.id === targetWorkspaceId)) {
-            setActiveWorkspaceState(fetchedWorkspaces.find((w) => w.id === targetWorkspaceId) || null);
+            resolvedWorkspace = fetchedWorkspaces.find((w) => w.id === targetWorkspaceId) || null;
           } else if (fetchedWorkspaces.length > 0) {
             // Default to first workspace
-            setActiveWorkspaceState(fetchedWorkspaces[0]);
+            resolvedWorkspace = fetchedWorkspaces[0];
             // Sync to Firestore
             await updateDoc(userRef, { activeWorkspaceId: fetchedWorkspaces[0].id });
           }
+
+          // Compute effective role for this workspace
+          if (resolvedWorkspace) {
+            rawUserData.role = getEffectiveRole(rawUserData, resolvedWorkspace.id);
+          }
+          setUser(rawUserData);
+          setActiveWorkspaceState(resolvedWorkspace);
 
           // Set up real-time subscription
           if (unsubscribeWsRef.current) unsubscribeWsRef.current();
@@ -121,10 +138,25 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  // Keep user.role in sync with the active workspace's workspaceRoles map
+  useEffect(() => {
+    if (!activeWorkspace) return;
+    setUser((prev) => {
+      if (!prev) return prev;
+      const workspaceRoles = prev.workspaceRoles || {};
+      const effectiveRole = workspaceRoles[activeWorkspace.id] || prev.role || "viewer";
+      if (prev.role === effectiveRole) return prev;
+      return { ...prev, role: effectiveRole as User["role"] };
+    });
+  }, [activeWorkspace?.id]);
+
   const switchWorkspace = useCallback(async (workspaceId: string) => {
     const workspace = workspaces.find((w) => w.id === workspaceId);
     if (!workspace || !user) return;
 
+    // Compute effective role for the target workspace
+    const updatedUser = { ...user, role: getEffectiveRole(user, workspaceId) };
+    setUser(updatedUser);
     setActiveWorkspaceState(workspace);
     localStorage.setItem(LOCAL_STORAGE_KEY, workspaceId);
 
@@ -150,6 +182,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       await updateDoc(userRef, {
         workspaceIds: [...workspaceIds, workspaceId],
         activeWorkspaceId: workspaceId,
+        [`workspaceRoles.${workspaceId}`]: "owner",
       });
     }
 
