@@ -22,6 +22,7 @@ import { MessageInput } from "@/components/messages/message-input";
 import { NewConversationDialog } from "@/components/messages/new-conversation-dialog";
 import { NewMemberConversationDialog } from "@/components/messages/new-member-conversation-dialog";
 import { NewGroupDialog } from "@/components/messages/new-group-dialog";
+import { ManageGroupDialog } from "@/components/messages/manage-group-dialog";
 import { CreateMeetingDialog } from "@/components/messages/create-meeting-dialog";
 import { TooltipButton } from "@/components/ui/tooltip-button";
 import {
@@ -37,7 +38,7 @@ import {
 } from "@/lib/firebase/messages";
 import { RequireModuleAccess } from "@/components/shared/require-module-access";
 import { getWorkspaceMembers } from "@/lib/firebase/workspaces";
-import { Search, Plus, Mail, Users, Video } from "lucide-react";
+import { Search, Plus, Mail, Users, Video, Settings } from "lucide-react";
 import { Timestamp } from "firebase/firestore";
 import { toast } from "@/lib/toast";
 import { getInitials } from "@/lib/utils";
@@ -119,6 +120,7 @@ export default function MessagesPage() {
   const [newConvOpen, setNewConvOpen] = useState(false);
   const [newMemberOpen, setNewMemberOpen] = useState(false);
   const [newGroupOpen, setNewGroupOpen] = useState(false);
+  const [manageGroupOpen, setManageGroupOpen] = useState(false);
 
   // Delete conversation
   const [deleteConvTarget, setDeleteConvTarget] = useState<Conversation | null>(null);
@@ -583,6 +585,56 @@ export default function MessagesPage() {
     [activeWorkspace, user]
   );
 
+  // ─── Update group members ─────────────────────────────────────────────
+
+  const handleUpdateGroupMembers = useCallback(
+    async (addedIds: string[], removedIds: string[]) => {
+      if (!selected || !activeWorkspace) return;
+      const { doc: fdoc, updateDoc } = await import("firebase/firestore");
+      const { db: fdb } = await import("@/lib/firebase/client");
+
+      const currentIds = selected.participantIds || [];
+      const currentNames = selected.participantNames || [];
+
+      // Compute new participant lists
+      let newIds = currentIds.filter((id) => !removedIds.includes(id));
+      newIds = [...newIds, ...addedIds];
+
+      // Build new names: keep existing, look up added from workspace members
+      const newNames: string[] = [];
+      for (const id of newIds) {
+        const existingIdx = currentIds.indexOf(id);
+        if (existingIdx >= 0 && currentNames[existingIdx]) {
+          newNames.push(currentNames[existingIdx]);
+        } else {
+          const member = workspaceMembers.find((m) => m.userId === id);
+          newNames.push(member?.displayName || "Unknown");
+        }
+      }
+
+      await updateDoc(fdoc(fdb, "conversations", selected.id), {
+        participantIds: newIds,
+        participantNames: newNames,
+      });
+
+      const addedNames = addedIds
+        .map(
+          (id) =>
+            workspaceMembers.find((m) => m.userId === id)?.displayName || id
+        )
+        .join(", ");
+      const removedNames = removedIds
+        .map((id) => selected.participantNames?.[selected.participantIds?.indexOf(id)] || id)
+        .join(", ");
+
+      const msgs: string[] = [];
+      if (addedNames) msgs.push(`Added ${addedNames}`);
+      if (removedNames) msgs.push(`Removed ${removedNames}`);
+      toast.success(msgs.join(" · "));
+    },
+    [selected, activeWorkspace, workspaceMembers]
+  );
+
   // ─── Search filter ───────────────────────────────────────────────────
 
   // ─── Member name lookup map ──────────────────────────────────────────
@@ -733,31 +785,45 @@ export default function MessagesPage() {
           {selected ? (
             <>
               {/* Conversation header */}
-              <div className="border-b px-4 py-3">
+              <div className="flex items-center justify-between border-b px-4 py-3">
                 {(() => {
                   const { name, detail, isMember, isGroup } = getConversationName(selected, user?.id || "", memberMap);
+                  const canManage = isGroup && (user?.role === "owner" || user?.role === "admin");
                   return (
-                    <div className="flex items-center gap-3">
-                      <Avatar className={`h-9 w-9 border ${isGroup ? "rounded-xl" : ""}`}>
-                        <AvatarFallback className={`text-xs ${
-                          isGroup
-                            ? "bg-violet-500/10 text-violet-600"
-                            : isMember
-                              ? "bg-amber-500/10 text-amber-600"
-                              : "bg-primary/10 text-primary"
-                        }`}>
-                          {isGroup ? (
-                            <Users className="h-4 w-4" />
-                          ) : (
-                            getInitials(name)
-                          )}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium">{name}</p>
-                        <p className="truncate text-xs text-muted-foreground">{detail}</p>
+                    <>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <Avatar className={`h-9 w-9 border shrink-0 ${isGroup ? "rounded-xl" : ""}`}>
+                          <AvatarFallback className={`text-xs ${
+                            isGroup
+                              ? "bg-violet-500/10 text-violet-600"
+                              : isMember
+                                ? "bg-amber-500/10 text-amber-600"
+                                : "bg-primary/10 text-primary"
+                          }`}>
+                            {isGroup ? (
+                              <Users className="h-4 w-4" />
+                            ) : (
+                              getInitials(name)
+                            )}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">{name}</p>
+                          <p className="truncate text-xs text-muted-foreground">{detail}</p>
+                        </div>
                       </div>
-                    </div>
+                      {canManage && (
+                        <TooltipButton
+                          tooltip="Manage members"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 shrink-0"
+                          onClick={() => setManageGroupOpen(true)}
+                        >
+                          <Settings className="h-4 w-4" />
+                        </TooltipButton>
+                      )}
+                    </>
                   );
                 })()}
               </div>
@@ -908,6 +974,17 @@ export default function MessagesPage() {
             currentUserName={user?.displayName || "You"}
             onCreateGroup={handleCreateGroup}
           />
+          {selected && (
+            <ManageGroupDialog
+              open={manageGroupOpen}
+              onOpenChange={setManageGroupOpen}
+              conversation={selected}
+              workspaceId={activeWorkspace.id}
+              currentUserId={user?.id || ""}
+              memberMap={memberMap}
+              onUpdateMembers={handleUpdateGroupMembers}
+            />
+          )}
         </>
       )}
 
