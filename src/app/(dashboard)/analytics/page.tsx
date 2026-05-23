@@ -495,10 +495,11 @@ export default function AnalyticsPage() {
                     <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: "black",
+                        backgroundColor: "hsl(var(--card))",
                         border: "1px solid hsl(var(--border))",
                         borderRadius: "8px",
                         boxShadow: "var(--shadow-elevated)",
+                        color: "hsl(var(--foreground))",
                       }}
                     />
                     <Line
@@ -510,54 +511,6 @@ export default function AnalyticsPage() {
                       activeDot={{ r: 5 }}
                     />
                   </LineChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="flex h-[250px] items-center justify-center text-sm text-muted-foreground">
-                  No data for this period
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        );
-      }
-
-      // --- Pie Chart ---
-      if (card.type === "pie_chart") {
-        let pieData: { name: string; value: number; color?: string }[] = [];
-        if (card.metric === "pipeline_distribution") pieData = pipelineData;
-        else if (card.metric === "lead_sources") pieData = sourceData;
-        else if (card.customFieldId) pieData = getCustomFieldData(card.customFieldId);
-
-        return (
-          <Card>
-            <CardHeader><CardTitle className="text-base">{card.title}</CardTitle></CardHeader>
-            <CardContent>
-              {pieData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={250}>
-                  <PieChart>
-                    <Pie
-                      data={pieData}
-                      cx="50%" cy="50%"
-                      innerRadius={60} outerRadius={90}
-                      paddingAngle={2}
-                      dataKey="value"
-                      label={({ name, value }) => `${name}: ${value}`}
-                      fill="hsl(var(--foreground))"
-                      fontSize={11}
-                    >
-                      {pieData.map((_entry, index) => (
-                        <Cell key={index} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "8px",
-                        boxShadow: "var(--shadow-elevated)",
-                      }}
-                    />
-                  </PieChart>
                 </ResponsiveContainer>
               ) : (
                 <div className="flex h-[250px] items-center justify-center text-sm text-muted-foreground">
@@ -593,6 +546,7 @@ export default function AnalyticsPage() {
                         border: "1px solid hsl(var(--border))",
                         borderRadius: "8px",
                         boxShadow: "var(--shadow-elevated)",
+                        color: "hsl(var(--foreground))",
                       }}
                     />
                     <Bar dataKey="value" fill={CHART_COLORS.bar} radius={[6, 6, 0, 0]} />
