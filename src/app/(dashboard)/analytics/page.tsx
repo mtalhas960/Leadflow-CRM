@@ -194,9 +194,9 @@ export default function AnalyticsPage() {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
 
   const stages: PipelineStage[] = activeWorkspace?.pipeline?.stages || DEFAULT_PIPELINE_STAGES;
-  const isAdmin = 
-    user?.role === "owner" || 
-    user?.role === "admin" || 
+  const isAdmin =
+    user?.role === "owner" ||
+    user?.role === "admin" ||
     activeWorkspace?.ownerId === user?.id;
 
   // Cards from workspace config
@@ -552,11 +552,11 @@ export default function AnalyticsPage() {
                     </Pie>
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: "hsl(var(--card))",
+                        backgroundColor: "#fff",
                         border: "1px solid hsl(var(--border))",
                         borderRadius: "8px",
                         boxShadow: "var(--shadow-elevated)",
-                        color: "hsl(var(--foreground))",
+                        color: "white",
                       }}
                     />
                   </PieChart>
@@ -1053,8 +1053,8 @@ function AddCardDialog({
           </Select>
 
           {/* Custom field picker (for pie/bar charts) */}
-          {(isCustomFieldMetric || 
-            option?.cardType === "bar_chart" || 
+          {(isCustomFieldMetric ||
+            option?.cardType === "bar_chart" ||
             option?.cardType === "pie_chart") && selectableFields.length > 0 && (
             <Select value={selectedCustomField} onValueChange={setSelectedCustomField}>
               <SelectTrigger>
@@ -1067,8 +1067,8 @@ function AddCardDialog({
               </SelectContent>
             </Select>
           )}
-          {(isCustomFieldMetric || 
-            option?.cardType === "bar_chart" || 
+          {(isCustomFieldMetric ||
+            option?.cardType === "bar_chart" ||
             option?.cardType === "pie_chart") && selectableFields.length === 0 && (
             <p className="text-xs text-muted-foreground">
               No select/multiselect custom fields available. Create one in Settings → Custom Fields.
