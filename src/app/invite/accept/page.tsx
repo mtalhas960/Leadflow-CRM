@@ -15,6 +15,7 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   onAuthStateChanged,
+  fetchSignInMethodsForEmail,
 } from "firebase/auth";
 import { doc, setDoc, getDoc, Timestamp } from "firebase/firestore";
 import {
@@ -97,10 +98,18 @@ function AcceptInviteContent() {
 
       setInvite(data);
 
-      // Check if user is already logged in with the invited email
+      // Check if the invited email already has a Firebase auth account
+      const signInMethods = await fetchSignInMethodsForEmail(auth, data.email);
+
       if (currentUser && currentUser.email?.toLowerCase() === data.email.toLowerCase()) {
+        // Already logged in with the matching email → one-click accept
         setPhase("already_logged_in");
+      } else if (signInMethods.length > 0) {
+        // Invited email has an existing account → show sign-in flow
+        setDisplayName(currentUser?.displayName || "");
+        setPhase("signin_existing");
       } else {
+        // No existing account → show signup flow
         setDisplayName(currentUser?.displayName || "");
         setPhase("signup");
       }
