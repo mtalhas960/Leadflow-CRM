@@ -929,16 +929,49 @@ function AddCardDialog({
     (f) => f.type === "select" || f.type === "multiselect"
   );
 
-  const filteredMetrics = AVAILABLE_METRICS.filter((m) => {
-    if (filterType !== "all" && m.cardType !== filterType) return false;
-    // Hide if already on page
-    if (existingCards.find((c) => c.metric === m.value)) return false;
-    return true;
-  });
+  // Build metric list: built-in + dynamic custom field entries
+  const filteredMetrics = useMemo(() => {
+    const builtIn = AVAILABLE_METRICS.filter((m) => {
+      if (filterType !== "all" && m.cardType !== filterType) return false;
+      if (existingCards.find((c) => c.metric === m.value)) return false;
+      return true;
+    });
 
-  const option = AVAILABLE_METRICS.find((m) => m.value === selectedMetric);
-  const isCustomFieldChart = option && (option.cardType === "bar_chart" || option.cardType === "pie_chart");
-  const canAdd = selectedMetric && (!isCustomFieldChart || selectedCustomField);
+    // Add dynamic custom field entries for bar/pie chart types
+    const withCustom: typeof builtIn = [...builtIn];
+    if (
+      selectableFields.length > 0 &&
+      (filterType === "all" || filterType === "bar_chart" || filterType === "pie_chart")
+    ) {
+      if (filterType === "all" || filterType === "bar_chart") {
+        withCustom.push({
+          value: "__custom_field_bar__",
+          label: "Custom Field (Bar Chart)",
+          cardType: "bar_chart",
+          description: "Show distribution of a select/multiselect custom field values as bars",
+          isBuiltIn: false,
+        });
+      }
+      if (filterType === "all" || filterType === "pie_chart") {
+        withCustom.push({
+          value: "__custom_field_pie__",
+          label: "Custom Field (Pie Chart)",
+          cardType: "pie_chart",
+          description: "Show distribution of a select/multiselect custom field values as pie",
+          isBuiltIn: false,
+        });
+      }
+    }
+    return withCustom;
+  }, [filterType, existingCards, selectableFields]);
+
+  const isCustomFieldMetric =
+    selectedMetric === "__custom_field_bar__" || selectedMetric === "__custom_field_pie__";
+  const option = isCustomFieldMetric
+    ? AVAILABLE_METRICS.find((m) => m.cardType === (selectedMetric === "__custom_field_bar__" ? "bar_chart" : "pie_chart"))
+    : AVAILABLE_METRICS.find((m) => m.value === selectedMetric);
+  const needsCustomField = isCustomFieldMetric;
+  const canAdd = selectedMetric && (!needsCustomField || selectedCustomField);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -997,7 +1030,9 @@ function AddCardDialog({
           </Select>
 
           {/* Custom field picker (for pie/bar charts) */}
-          {isCustomFieldChart && selectableFields.length > 0 && (
+          {(isCustomFieldMetric || 
+            option?.cardType === "bar_chart" || 
+            option?.cardType === "pie_chart") && selectableFields.length > 0 && (
             <Select value={selectedCustomField} onValueChange={setSelectedCustomField}>
               <SelectTrigger>
                 <SelectValue placeholder="Pick a custom field..." />
@@ -1009,7 +1044,9 @@ function AddCardDialog({
               </SelectContent>
             </Select>
           )}
-          {isCustomFieldChart && selectableFields.length === 0 && (
+          {(isCustomFieldMetric || 
+            option?.cardType === "bar_chart" || 
+            option?.cardType === "pie_chart") && selectableFields.length === 0 && (
             <p className="text-xs text-muted-foreground">
               No select/multiselect custom fields available. Create one in Settings → Custom Fields.
             </p>
