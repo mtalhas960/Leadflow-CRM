@@ -66,6 +66,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         const userSnap = await getDoc(userRef);
         if (userSnap.exists()) {
           const userData = userSnap.data() as User;
+          // Always set id from Firestore doc ID (legacy accounts may not store it)
+          if (!userData.id) userData.id = firebaseUser.uid;
           setUser(userData);
 
           // Determine active workspace

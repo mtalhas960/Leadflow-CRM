@@ -13,6 +13,7 @@ import { formatCurrency } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { UpcomingEvents } from "@/components/dashboard/upcoming-events";
 import { RequireModuleAccess } from "@/components/shared/require-module-access";
+import { usePermissions } from "@/lib/hooks/use-permissions";
 
 interface Stats {
   total: number;
@@ -23,6 +24,7 @@ interface Stats {
 export default function DashboardPage() {
   const router = useRouter();
   const { activeWorkspace } = useWorkspace();
+  const { canAccess } = usePermissions();
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -74,45 +76,61 @@ export default function DashboardPage() {
         }
       />
 
-      {/* KPI Cards */}
+      {/* KPI Cards — filtered by module access */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Total Leads"
-          value={stats?.total ?? 0}
-          icon={<Users className="h-5 w-5" />}
-          accentColor="info"
-        />
-        <StatCard
-          title="Active Deals"
-          value={activeDeals}
-          icon={<Target className="h-5 w-5" />}
-          accentColor="primary"
-        />
-        <StatCard
-          title="Pipeline Value"
-          value={formatCurrency(stats?.totalValue ?? 0)}
-          icon={<DollarSign className="h-5 w-5" />}
-          accentColor="success"
-        />
-        <StatCard
-          title="Conversion Rate"
-          value={`${conversionRate}%`}
-          icon={<TrendingUp className="h-5 w-5" />}
-          accentColor="warning"
-        />
+        {canAccess("leads") && (
+          <StatCard
+            title="Total Leads"
+            value={stats?.total ?? 0}
+            icon={<Users className="h-5 w-5" />}
+            accentColor="info"
+          />
+        )}
+        {canAccess("pipeline") && (
+          <StatCard
+            title="Active Deals"
+            value={activeDeals}
+            icon={<Target className="h-5 w-5" />}
+            accentColor="primary"
+          />
+        )}
+        {canAccess("pipeline") && (
+          <StatCard
+            title="Pipeline Value"
+            value={formatCurrency(stats?.totalValue ?? 0)}
+            icon={<DollarSign className="h-5 w-5" />}
+            accentColor="success"
+          />
+        )}
+        {canAccess("analytics") && (
+          <StatCard
+            title="Conversion Rate"
+            value={`${conversionRate}%`}
+            icon={<TrendingUp className="h-5 w-5" />}
+            accentColor="warning"
+          />
+        )}
       </div>
 
-      {/* Upcoming Events */}
-      <UpcomingEvents />
+      {/* Upcoming Events — only if time tracker access */}
+      {canAccess("time_tracker") && <UpcomingEvents />}
 
-      {/* Empty State / Getting Started */}
-      {stats?.total === 0 && (
+      {/* Empty State / Getting Started — only if leads access */}
+      {stats?.total === 0 && canAccess("leads") && (
         <EmptyState
           icon={<Users className="h-6 w-6" />}
           title="No leads yet"
           description="Start building your pipeline by adding your first lead. Track deals, manage contacts, and close more sales."
           actionLabel="Add Your First Lead"
           onAction={() => router.push("/leads")}
+        />
+      )}
+      {/* Show info when no accessible modules have data */}
+      {stats?.total === 0 && !canAccess("leads") && (
+        <EmptyState
+          icon={<Target className="h-6 w-6" />}
+          title="Welcome to LeadFlow"
+          description="Your workspace admin has configured module access. Contact them to adjust your permissions."
         />
       )}
     </div>

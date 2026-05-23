@@ -84,6 +84,7 @@ import { calculateLeadScore, type ScoreBreakdown } from "@/lib/lead-scoring";
 import { getEmailsForWorkspace, type EmailRecord } from "@/lib/firebase/emails";
 import { ExportButton } from "@/components/shared/export-button";
 import { RequireModuleAccess } from "@/components/shared/require-module-access";
+import { CountrySelect } from "@/components/ui/country-select";
 
 // Dynamically loaded components — only loaded when user opens the dialog
 const LeadForm = dynamic(() => import("@/components/leads/lead-form").then((mod) => mod.LeadForm), {
@@ -113,6 +114,7 @@ export default function LeadsPage() {
   const COLUMN_LABELS: Record<string, string> = {
     name: "Name",
     company: "Company",
+    country: "Country",
     status: "Status",
     value: "Value",
     created: "Created",
@@ -152,7 +154,7 @@ export default function LeadsPage() {
   // Build the effective column order: standard fields + custom fields (new ones appended at end)
   const allCustomFields = activeWorkspace?.customFields || [];
   const allCustomPrefixed = allCustomFields.map((cf) => `cf_${cf.id}`);
-  const defaultOrder = ["name", "company", "status", "value", ...allCustomPrefixed, "created", "score"];
+  const defaultOrder = ["name", "company", "country", "status", "value", ...allCustomPrefixed, "created", "score"];
 
   const effectiveOrder = useMemo(() => {
     let order = columnOrder.length > 0 ? [...columnOrder] : [...defaultOrder];
@@ -711,6 +713,21 @@ export default function LeadsPage() {
                                     const { updateLead } = await import("@/lib/firebase/firestore");
                                     await updateLead(lead.id, { company: v });
                                   }}
+                                />
+                              </td>
+                            );
+                          }
+                          if (colId === "country") {
+                            return (
+                              <td key="country" className="px-4 py-3 text-sm hidden lg:table-cell">
+                                <CountrySelect
+                                  value={lead.country || ""}
+                                  onChange={async (v) => {
+                                    const { updateLead } = await import("@/lib/firebase/firestore");
+                                    await updateLead(lead.id, { country: v || null });
+                                  }}
+                                  placeholder="—"
+                                  inline
                                 />
                               </td>
                             );

@@ -15,7 +15,6 @@ export interface AuthContext {
  * to the specified workspace. Optionally checks module-level permissions.
  *
  * Returns `AuthContext` on success or a `NextResponse` error on failure.
- * The caller should check with `instanceof NextResponse` or check for `.status`.
  */
 export async function requireAuth(
   req: NextRequest,
@@ -37,7 +36,7 @@ export async function requireAuth(
     );
   }
 
-  // Verify user exists and belongs to workspace
+  // Verify user exists
   const userRef = doc(db, "users", userId);
   const userSnap = await getDoc(userRef);
 
@@ -51,7 +50,25 @@ export async function requireAuth(
   const userData = userSnap.data();
   const workspaceRoles: Record<string, string> =
     userData.workspaceRoles || {};
-  const role = workspaceRoles[workspaceId] || null;
+  let role = workspaceRoles[workspaceId] || null;
+
+  // Fetch workspace once (used for fallback role + module permissions)
+  const workspaceRef = doc(db, "workspaces", workspaceId);
+  const workspaceSnap = await getDoc(workspaceRef);
+  const workspaceData = workspaceSnap.exists() ? workspaceSnap.data() : null;
+
+  // Fallback: if workspaceRoles doesn't have this workspace,
+  // check legacy workspaceIds + workspace's ownerId/memberIds
+  if (!role && workspaceData) {
+    const userWorkspaceIds: string[] = userData.workspaceIds || [];
+    if (userWorkspaceIds.includes(workspaceId)) {
+      if (workspaceData.ownerId === userId) {
+        role = "owner";
+      } else {
+        role = userData.role || "member";
+      }
+    }
+  }
 
   if (!role) {
     return NextResponse.json(
@@ -60,21 +77,15 @@ export async function requireAuth(
     );
   }
 
-  // Owner and admin bypass module checks
-  if (moduleId && role !== "owner" && role !== "admin") {
-    const workspaceRef = doc(db, "workspaces", workspaceId);
-    const workspaceSnap = await getDoc(workspaceRef);
+  // Module-level permission check (owner/admin bypass)
+  if (moduleId && role !== "owner" && role !== "admin" && workspaceData) {
+    const modulePermissions = workspaceData.modulePermissions || null;
 
-    if (workspaceSnap.exists()) {
-      const workspaceData = workspaceSnap.data();
-      const modulePermissions = workspaceData.modulePermissions || null;
-
-      if (!canAccessModule(modulePermissions, role, moduleId)) {
-        return NextResponse.json(
-          { error: `Access denied. Your role does not have access to ${moduleId}.` },
-          { status: 403 }
-        );
-      }
+    if (!canAccessModule(modulePermissions, role, moduleId)) {
+      return NextResponse.json(
+        { error: `Access denied. Your role does not have access to ${moduleId}.` },
+        { status: 403 }
+      );
     }
   }
 
@@ -83,7 +94,6 @@ export async function requireAuth(
 
 /**
  * Wrapper: extracts auth context or returns the error response directly.
- * Throws nothing — always returns either AuthContext or NextResponse.
  */
 export async function withAuth(
   req: NextRequest,

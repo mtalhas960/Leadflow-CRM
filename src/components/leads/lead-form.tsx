@@ -19,6 +19,7 @@ import { useState } from "react";
 import { toast } from "@/lib/toast";
 import type { CustomField } from "@/types";
 import { Separator } from "@/components/ui/separator";
+import { CountrySelect } from "@/components/ui/country-select";
 
 interface LeadFormProps {
   onSuccess: () => void;
@@ -195,6 +196,22 @@ export function LeadForm({ onSuccess, userId, workspaceId, defaultValues, custom
               ))}
             </SelectContent>
           </Select>
+        </div>
+      </div>
+
+      <Separator />
+      <p className="text-sm font-medium text-muted-foreground">Location</p>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="country">Country</Label>
+          <CountrySelect
+            value={form.watch("country") || ""}
+            onChange={(v) => form.setValue("country", v)}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="city">City</Label>
+          <Input id="city" {...form.register("city")} placeholder="New York" />
         </div>
       </div>
 

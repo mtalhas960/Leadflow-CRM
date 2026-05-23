@@ -117,7 +117,7 @@ export default function SettingsPage() {
         return "profile";
       }
     }
-    return "workspace";
+    return "profile";
   });
   const [workspaceName, setWorkspaceName] = useState("");
   const [savingName, setSavingName] = useState(false);
@@ -416,16 +416,20 @@ export default function SettingsPage() {
     );
   }
 
-  const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
+  const isAdminOrOwner = user?.role === "owner" || user?.role === "admin";
+
+  const allTabs: { id: Tab; label: string; icon: React.ReactNode; adminOnly?: boolean }[] = [
     { id: "profile", label: "Profile", icon: <UserCircle className="h-4 w-4" /> },
-    { id: "workspace", label: "Workspace", icon: <Building2 className="h-4 w-4" /> },
-    { id: "members", label: "Members", icon: <Users className="h-4 w-4" /> },
+    { id: "workspace", label: "Workspace", icon: <Building2 className="h-4 w-4" />, adminOnly: true },
+    { id: "members", label: "Members", icon: <Users className="h-4 w-4" />, adminOnly: true },
     { id: "pipeline", label: "Pipeline", icon: <KanbanSquare className="h-4 w-4" /> },
     { id: "custom-fields", label: "Custom Fields", icon: <ListFilter className="h-4 w-4" /> },
-    { id: "permissions", label: "Permissions", icon: <Shield className="h-4 w-4" /> },
+    { id: "permissions", label: "Permissions", icon: <Shield className="h-4 w-4" />, adminOnly: true },
     { id: "preferences", label: "Preferences", icon: <Settings className="h-4 w-4" /> },
     { id: "integrations", label: "Integrations", icon: <Plug className="h-4 w-4" /> },
   ];
+
+  const tabs = allTabs.filter((tab) => !tab.adminOnly || isAdminOrOwner);
 
   return (
     <RequireModuleAccess moduleId="settings">
