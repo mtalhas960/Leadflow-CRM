@@ -12,6 +12,7 @@ import { Users, TrendingUp, DollarSign, Target, Plus } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { UpcomingEvents } from "@/components/dashboard/upcoming-events";
+import { RequireModuleAccess } from "@/components/shared/require-module-access";
 
 interface Stats {
   total: number;
@@ -60,10 +61,11 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Dashboard"
-        description="Welcome back! Here&apos;s an overview of your CRM."
+    <RequireModuleAccess moduleId="dashboard">
+      <div className="space-y-6">
+        <PageHeader
+          title="Dashboard"
+          description="Welcome back! Here&apos;s an overview of your CRM."
         actions={
           <Button onClick={() => router.push("/leads")}>
             <Plus className="mr-2 h-4 w-4" />
@@ -114,5 +116,6 @@ export default function DashboardPage() {
         />
       )}
     </div>
+    </RequireModuleAccess>
   );
 }

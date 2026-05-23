@@ -99,6 +99,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useRouter } from "next/navigation";
+import { RequireModuleAccess } from "@/components/shared/require-module-access";
 import { FileText } from "lucide-react";
 
 type Tab = "profile" | "workspace" | "members" | "pipeline" | "custom-fields" | "permissions" | "preferences" | "integrations";
@@ -275,13 +276,15 @@ export default function SettingsPage() {
 
       await fetch("/api/email/send", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": firebaseUser.uid,
+          "x-workspace-id": activeWorkspace.id,
+        },
         body: JSON.stringify({
           to: inviteEmail.trim(),
           subject: `Join ${workspaceName} on LeadFlow CRM`,
           html,
-          workspaceId: activeWorkspace.id,
-          createdBy: firebaseUser.uid,
         }),
       });
 
@@ -425,8 +428,9 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div className="space-y-6">
-      <PageHeader title="Settings" description="Manage your workspace and preferences." />
+    <RequireModuleAccess moduleId="settings">
+      <div className="space-y-6">
+        <PageHeader title="Settings" description="Manage your workspace and preferences." />
 
       {/* Tab Navigation */}
       <div className="flex items-center gap-2">
@@ -1145,5 +1149,6 @@ export default function SettingsPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </RequireModuleAccess>
   );
 }

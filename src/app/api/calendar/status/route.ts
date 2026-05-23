@@ -1,23 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCalendarConnectionStatus } from "@/lib/calendar";
+import { withAuth } from "@/lib/api/middleware";
 
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
-
-    if (!userId) {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
+export async function GET(req: NextRequest) {
+  return withAuth(req, async (ctx) => {
+    try {
+      const status = await getCalendarConnectionStatus(ctx.userId);
+      return NextResponse.json(status);
+    } catch (error) {
+      console.error("Failed to check calendar status:", error);
+      return NextResponse.json(
+        { connected: false, email: null, error: "Failed to check connection status" },
+        { status: 500 }
+      );
     }
-
-    const status = await getCalendarConnectionStatus(userId);
-
-    return NextResponse.json(status);
-  } catch (error) {
-    console.error("Failed to check calendar status:", error);
-    return NextResponse.json(
-      { connected: false, email: null, error: "Failed to check connection status" },
-      { status: 500 }
-    );
-  }
+  });
 }

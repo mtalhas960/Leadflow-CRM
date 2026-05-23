@@ -83,6 +83,7 @@ import {
 import { calculateLeadScore, type ScoreBreakdown } from "@/lib/lead-scoring";
 import { getEmailsForWorkspace, type EmailRecord } from "@/lib/firebase/emails";
 import { ExportButton } from "@/components/shared/export-button";
+import { RequireModuleAccess } from "@/components/shared/require-module-access";
 
 // Dynamically loaded components — only loaded when user opens the dialog
 const LeadForm = dynamic(() => import("@/components/leads/lead-form").then((mod) => mod.LeadForm), {
@@ -379,10 +380,11 @@ export default function LeadsPage() {
     sortedLeads.every((l) => selectedIds.has(l.id));
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Leads"
-        description={`${leads.length} total lead${leads.length !== 1 ? "s" : ""}`}
+    <RequireModuleAccess moduleId="leads">
+      <div className="space-y-6">
+        <PageHeader
+          title="Leads"
+          description={`${leads.length} total lead${leads.length !== 1 ? "s" : ""}`}
         actions={
           <div className="flex gap-2">
             <ExportButton type="leads" data={sortedLeads} />
@@ -908,5 +910,6 @@ export default function LeadsPage() {
         customFields={activeWorkspace?.customFields || []}
       />
     </div>
+    </RequireModuleAccess>
   );
 }

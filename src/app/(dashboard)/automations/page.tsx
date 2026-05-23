@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shared/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
+import { RequireModuleAccess } from "@/components/shared/require-module-access";
 import { AutomationCard, AutomationBuilder } from "@/components/automations/automation-builder";
 import {
   getAutomations,
@@ -109,10 +110,11 @@ export default function AutomationsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Automations"
-        description="Set up follow-up rules and automated actions to save time."
+    <RequireModuleAccess moduleId="automations">
+      <div className="space-y-6">
+        <PageHeader
+          title="Automations"
+          description="Set up follow-up rules and automated actions to save time."
         actions={
           <Button onClick={() => setBuilderOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
@@ -156,5 +158,6 @@ export default function AutomationsPage() {
         onOpenChange={handleBuilderClose}
       />
     </div>
+    </RequireModuleAccess>
   );
 }

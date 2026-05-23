@@ -19,16 +19,21 @@ interface CalendarConnectionProps {
 }
 
 export function CalendarConnection({ onConnect }: CalendarConnectionProps) {
-  const { user } = useWorkspace();
+  const { user, activeWorkspace } = useWorkspace();
   const [connected, setConnected] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [disconnecting, setDisconnecting] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !activeWorkspace) return;
 
-    fetch(`/api/calendar/events?userId=${user.id}`)
+    fetch(`/api/calendar/events?maxResults=5`, {
+      headers: {
+        "x-user-id": user.id,
+        "x-workspace-id": activeWorkspace.id,
+      },
+    })
       .then((res) => res.json())
       .then((data) => {
         if (data.error && data.error.includes("not connected")) {
@@ -44,7 +49,7 @@ export function CalendarConnection({ onConnect }: CalendarConnectionProps) {
       .finally(() => {
         setLoading(false);
       });
-  }, [user]);
+  }, [user, activeWorkspace]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -66,13 +71,16 @@ export function CalendarConnection({ onConnect }: CalendarConnectionProps) {
   };
 
   const handleDisconnect = async () => {
-    if (!user) return;
+    if (!user || !activeWorkspace) return;
     setDisconnecting(true);
     try {
       const res = await fetch("/api/calendar/events", {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id }),
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": user.id,
+          "x-workspace-id": activeWorkspace.id,
+        },
       });
 
       if (res.ok) {

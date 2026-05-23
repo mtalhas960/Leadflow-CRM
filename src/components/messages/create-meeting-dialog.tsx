@@ -49,7 +49,12 @@ export function CreateMeetingDialog({
 
       try {
         // Step 1: Check if Google Calendar is connected
-        const statusRes = await fetch(`/api/calendar/status?userId=${userId}`);
+        const statusRes = await fetch(`/api/calendar/status`, {
+          headers: {
+            "x-user-id": userId,
+            "x-workspace-id": workspaceId,
+          },
+        });
         const statusData = await statusRes.json();
 
         if (cancelled) return;
@@ -63,10 +68,12 @@ export function CreateMeetingDialog({
         setState("creating");
         const meetRes = await fetch("/api/meetings/instant", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "x-user-id": userId,
+            "x-workspace-id": workspaceId,
+          },
           body: JSON.stringify({
-            userId,
-            workspaceId,
             attendees,
             conversationId,
             leadId,

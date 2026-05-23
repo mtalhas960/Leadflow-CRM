@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
+import { RequireModuleAccess } from "@/components/shared/require-module-access";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Play,
@@ -179,10 +180,11 @@ export default function TimeTrackerPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Time Tracker"
-        description="Track time spent on leads and tasks."
+    <RequireModuleAccess moduleId="time_tracker">
+      <div className="space-y-6">
+        <PageHeader
+          title="Time Tracker"
+          description="Track time spent on leads and tasks."
         actions={
           <div className="flex items-center gap-3">
             <span className="text-sm text-muted-foreground">
@@ -487,6 +489,7 @@ export default function TimeTrackerPage() {
         )}
       </div>
     </div>
+    </RequireModuleAccess>
   );
 }
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { collection, addDoc, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { addTrackingPixel, rewriteLinks } from "@/lib/email-tracking";
+import { withAuth } from "@/lib/api/middleware";
 
 const FROM_EMAIL = process.env.FROM_EMAIL || "noreply@leadflow.app";
 const FROM_NAME = process.env.FROM_NAME || "LeadFlow CRM";
@@ -25,39 +26,40 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  try {
-    const body = await req.json();
-    const { to, subject, html, text, leadId, workspaceId, createdBy, trackOpens, trackClicks } = body;
+  return withAuth(req, async (ctx) => {
+    try {
+      const body = await req.json();
+      const { to, subject, html, text, leadId, trackOpens, trackClicks } = body;
 
-    if (!to || !subject || (!html && !text)) {
-      return NextResponse.json(
-        { error: "to, subject, and html/text are required" },
-        { status: 400 }
-      );
-    }
+      if (!to || !subject || (!html && !text)) {
+        return NextResponse.json(
+          { error: "to, subject, and html/text are required" },
+          { status: 400 }
+        );
+      }
 
-    const enableTracking = trackOpens !== false && trackClicks !== false;
-    const baseUrl = getBaseUrl();
+      const enableTracking = trackOpens !== false && trackClicks !== false;
+      const baseUrl = getBaseUrl();
 
-    let processedHtml = html || "";
-    const processedText = text || html?.replace(/<[^>]*>/g, "") || "";
+      let processedHtml = html || "";
+      const processedText = text || html?.replace(/<[^>]*>/g, "") || "";
 
-    // Create Firestore record first (needed for tracking IDs)
-    let emailId = "";
-    if (leadId && workspaceId) {
-      const docRef = await addDoc(collection(db, EMAILS_COLLECTION), {
-        workspaceId,
-        leadId,
-        to: Array.isArray(to) ? to[0] : to,
-        subject,
-        body: text || processedText,
-        status: "sent",
-        sentAt: Timestamp.now(),
-        createdBy: createdBy || "system",
-        createdAt: Timestamp.now(),
-        trackingEnabled: enableTracking,
-      });
-      emailId = docRef.id;
+      // Create Firestore record first (needed for tracking IDs)
+      let emailId = "";
+      if (leadId) {
+        const docRef = await addDoc(collection(db, EMAILS_COLLECTION), {
+          workspaceId: ctx.workspaceId,
+          leadId,
+          to: Array.isArray(to) ? to[0] : to,
+          subject,
+          body: text || processedText,
+          status: "sent",
+          sentAt: Timestamp.now(),
+          createdBy: ctx.userId,
+          createdAt: Timestamp.now(),
+          trackingEnabled: enableTracking,
+        });
+        emailId = docRef.id;
 
       // Inject tracking pixel and rewrite links
       if (enableTracking && processedHtml) {
@@ -82,7 +84,7 @@ export async function POST(req: NextRequest) {
       text: processedText,
       headers: {
         "X-LeadFlow-Lead-Id": leadId || "",
-        "X-LeadFlow-Workspace-Id": workspaceId || "",
+        "X-LeadFlow-Workspace-Id": ctx.workspaceId,
       ...(emailId ? { "X-LeadFlow-Email-Id": emailId } : {})},
     });
 
@@ -107,17 +109,18 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({
-      success: true,
-      emailId,
-      resendId: result.data?.id,
-    });
-  } catch (error) {
-    console.error("Email send error:", error);
-    const message = error instanceof Error ? error.message : "Failed to send email";
-    return NextResponse.json(
-      { error: message },
-      { status: 500 }
-    );
-  }
+      return NextResponse.json({
+        success: true,
+        emailId,
+        resendId: result.data?.id,
+      });
+    } catch (error) {
+      console.error("Email send error:", error);
+      const message = error instanceof Error ? error.message : "Failed to send email";
+      return NextResponse.json(
+        { error: message },
+        { status: 500 }
+      );
+    }
+  });
 }

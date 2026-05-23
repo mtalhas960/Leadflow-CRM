@@ -34,6 +34,7 @@ import {
   toggleReaction,
   fixConversationNames,
 } from "@/lib/firebase/messages";
+import { RequireModuleAccess } from "@/components/shared/require-module-access";
 import { getWorkspaceMembers } from "@/lib/firebase/workspaces";
 import { Search, Plus, Mail, Users, Video } from "lucide-react";
 import { Timestamp } from "firebase/firestore";
@@ -350,12 +351,14 @@ export default function MessagesPage() {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("workspaceId", activeWorkspace?.id || "");
       formData.append("leadId", selected?.leadId || "");
-      formData.append("userId", user?.id || "");
 
       const res = await fetch("/api/documents/upload", {
         method: "POST",
+        headers: {
+          "x-user-id": user?.id || "",
+          "x-workspace-id": activeWorkspace?.id || "",
+        },
         body: formData,
       });
 
@@ -602,7 +605,8 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <RequireModuleAccess moduleId="messages">
+      <div className="space-y-6">
         <PageHeader
           title="Messages"
           description="Real-time messaging with leads and team members."
@@ -851,5 +855,6 @@ export default function MessagesPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </RequireModuleAccess>
   );
 }

@@ -38,15 +38,17 @@ export async function sendEmail(data: {
 }): Promise<string> {
   const response = await fetch("/api/email/send", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-user-id": data.createdBy,
+      "x-workspace-id": data.workspaceId,
+    },
     body: JSON.stringify({
       to: data.to,
       subject: data.subject,
       html: data.body.replace(/\n/g, "<br/>"),
       text: data.body,
       leadId: data.leadId,
-      workspaceId: data.workspaceId,
-      createdBy: data.createdBy,
       trackOpens: data.trackOpens !== false,
       trackClicks: data.trackClicks !== false,
     }),

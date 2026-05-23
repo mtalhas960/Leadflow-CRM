@@ -83,7 +83,12 @@ export function DocumentManager({
 
   const fetchDocuments = useCallback(async () => {
     try {
-      const res = await fetch(`/api/documents/list?leadId=${leadId}&workspaceId=${workspaceId}`);
+      const res = await fetch(`/api/documents/list?leadId=${leadId}&workspaceId=${workspaceId}`, {
+        headers: {
+          "x-user-id": userId,
+          "x-workspace-id": workspaceId,
+        },
+      });
       if (!res.ok) {
         const errBody = await res.json().catch(() => ({}));
         throw new Error(errBody.error || `Server error (${res.status})`);
@@ -105,7 +110,7 @@ export function DocumentManager({
     } finally {
       setLoading(false);
     }
-  }, [leadId, workspaceId]);
+  }, [leadId, workspaceId, userId]);
 
   useEffect(() => {
     fetchDocuments();
@@ -158,8 +163,6 @@ export function DocumentManager({
         const formData = new FormData();
         formData.append("file", file);
         formData.append("leadId", leadId);
-        formData.append("workspaceId", workspaceId);
-        formData.append("userId", userId);
 
         try {
           const xhr = new XMLHttpRequest();
@@ -191,6 +194,8 @@ export function DocumentManager({
 
             xhr.addEventListener("error", () => reject(new Error("Network error")));
             xhr.open("POST", "/api/documents/upload");
+            xhr.setRequestHeader("x-user-id", userId);
+            xhr.setRequestHeader("x-workspace-id", workspaceId);
             xhr.send(formData);
           });
 
@@ -248,8 +253,12 @@ export function DocumentManager({
     try {
       const res = await fetch("/api/documents/list", {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ documentId, workspaceId }),
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": userId,
+          "x-workspace-id": workspaceId,
+        },
+        body: JSON.stringify({ documentId }),
       });
       const data = await res.json();
       if (data.success) {

@@ -194,14 +194,17 @@ export function LeadDetail({ leadId }: LeadDetailProps) {
   };
 
   const handleAddToCalendar = async () => {
-    if (!lead?.nextFollowUpAt || !user) return;
+    if (!lead?.nextFollowUpAt || !user || !activeWorkspace) return;
     setAddingToCalendar(true);
     try {
       const res = await fetch("/api/calendar/events", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": user.id,
+          "x-workspace-id": activeWorkspace.id,
+        },
         body: JSON.stringify({
-          userId: user.id,
           leadId: lead.id,
           followUpDate: lead.nextFollowUpAt.toDate().toISOString(),
         }),

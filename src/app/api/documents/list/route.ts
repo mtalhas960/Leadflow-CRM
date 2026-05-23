@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/firebase/client";
 import { collection, query, where, getDocs, doc, deleteDoc } from "firebase/firestore";
 import { cloudinary } from "@/lib/cloudinary";
+import { withAuth } from "@/lib/api/middleware";
 
 const DOCUMENTS_COLLECTION = "documents";
 
 export async function GET(req: NextRequest) {
+  return withAuth(req, async (ctx) => {
   try {
     const { searchParams } = new URL(req.url);
     const leadId = searchParams.get("leadId");
@@ -54,16 +56,18 @@ export async function GET(req: NextRequest) {
       { status: 500 }
     );
   }
+  });
 }
 
 export async function DELETE(req: NextRequest) {
+  return withAuth(req, async (ctx) => {
   try {
     const body = await req.json();
-    const { documentId, workspaceId } = body;
+    const { documentId } = body;
 
-    if (!documentId || !workspaceId) {
+    if (!documentId) {
       return NextResponse.json(
-        { error: "documentId and workspaceId are required" },
+        { error: "documentId is required" },
         { status: 400 }
       );
     }
@@ -71,7 +75,7 @@ export async function DELETE(req: NextRequest) {
     // Get document metadata
     const q = query(
       collection(db, DOCUMENTS_COLLECTION),
-      where("workspaceId", "==", workspaceId),
+      where("workspaceId", "==", ctx.workspaceId),
       where("__name__", "==", documentId)
     );
     const snapshot = await getDocs(q);
@@ -103,4 +107,5 @@ export async function DELETE(req: NextRequest) {
       { status: 500 }
     );
   }
+  });
 }

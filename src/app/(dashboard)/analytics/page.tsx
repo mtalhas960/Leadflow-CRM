@@ -36,6 +36,7 @@ import { formatCurrency } from "@/lib/utils";
 import { TrendingUp, TrendingDown, Users, DollarSign, Target, Mail, Phone, Download } from "lucide-react";
 import { ExportButton } from "@/components/shared/export-button";
 import type { AnalyticsMetrics } from "@/lib/export";
+import { RequireModuleAccess } from "@/components/shared/require-module-access";
 
 const COLORS = [
   "hsl(212 72% 58%)",
@@ -204,10 +205,11 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Analytics"
-        description="Insights into your CRM performance."
+    <RequireModuleAccess moduleId="analytics">
+      <div className="space-y-6">
+        <PageHeader
+          title="Analytics"
+          description="Insights into your CRM performance."
         actions={
           <div className="flex items-center gap-2">
             <ExportButton type="analytics" data={analyticsMetrics} />
@@ -598,5 +600,6 @@ export default function AnalyticsPage() {
         </Card>
       </div>
     </div>
+    </RequireModuleAccess>
   );
 }

@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 import { Timestamp, QueryDocumentSnapshot, DocumentData } from "firebase/firestore";
 import { toast } from "@/lib/toast";
+import { RequireModuleAccess } from "@/components/shared/require-module-access";
 
 const PAGE_SIZE = 20;
 
@@ -234,10 +235,11 @@ export default function AuditLogPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Audit Log"
-        description="Track all activity and changes across your workspace."
+    <RequireModuleAccess moduleId="settings">
+      <div className="space-y-6">
+        <PageHeader
+          title="Audit Log"
+          description="Track all activity and changes across your workspace."
         actions={
           <Button variant="outline" onClick={handleExportCSV} disabled={logs.length === 0}>
             <Download className="mr-2 h-4 w-4" />
@@ -434,6 +436,7 @@ export default function AuditLogPage() {
         </CardContent>
       </Card>
     </div>
+    </RequireModuleAccess>
   );
 }
 

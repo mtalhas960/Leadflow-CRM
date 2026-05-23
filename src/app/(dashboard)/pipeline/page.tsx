@@ -6,6 +6,7 @@ import { useLeadStore } from "@/lib/stores/leadStore";
 import { KanbanBoard } from "@/components/pipeline/kanban-board";
 import { PageHeader } from "@/components/shared/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
+import { RequireModuleAccess } from "@/components/shared/require-module-access";
 
 export default function PipelinePage() {
   const { activeWorkspace } = useWorkspace();
@@ -57,12 +58,14 @@ export default function PipelinePage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Pipeline"
-        description="Drag and drop leads between stages to update their status."
-      />
-      <KanbanBoard />
-    </div>
+    <RequireModuleAccess moduleId="pipeline">
+      <div className="space-y-6">
+        <PageHeader
+          title="Pipeline"
+          description="Drag and drop leads between stages to update their status."
+        />
+        <KanbanBoard />
+      </div>
+    </RequireModuleAccess>
   );
 }
