@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getMeetingTypeByToken } from "@/lib/firebase/meeting-types";
-import { createMeeting } from "@/lib/firebase/meetings";
+import { getMeetingTypeByToken, createMeeting, getWorkspace } from "@/lib/firebase/server-admin";
 import { createGoogleMeetEvent } from "@/lib/calendar";
-import { Timestamp } from "firebase/firestore";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
 
 /**
  * GET /api/meetings/book/:token
@@ -25,9 +21,9 @@ export async function GET(
     // Get workspace name for branding
     let workspaceName = "Unknown Workspace";
     try {
-      const wsSnap = await getDoc(doc(db, "workspaces", meetingType.workspaceId));
-      if (wsSnap.exists()) {
-        workspaceName = (wsSnap.data() as { name?: string }).name || workspaceName;
+      const wsData = await getWorkspace(meetingType.workspaceId);
+      if (wsData) {
+        workspaceName = (wsData as { name?: string }).name || workspaceName;
       }
     } catch {
       // Non-critical
@@ -94,10 +90,9 @@ export async function POST(
     if (meetingType.videoTool === "google_meet") {
       try {
         // Use the workspace owner's calendar for Meet creation
-        const wsSnap = await getDoc(doc(db, "workspaces", meetingType.workspaceId));
-        if (wsSnap.exists()) {
-          const wsData = wsSnap.data() as { ownerId?: string };
-          const ownerId = wsData.ownerId;
+        const wsData = await getWorkspace(meetingType.workspaceId);
+        if (wsData) {
+          const ownerId = (wsData as { ownerId?: string }).ownerId;
           if (ownerId) {
             meetResult = await createGoogleMeetEvent(ownerId, attendees, {
               title: `Meeting: ${meetingType.name}`,
@@ -116,8 +111,8 @@ export async function POST(
       workspaceId: meetingType.workspaceId,
       title: `${meetingType.name} — ${attendeeName}`,
       description: notes || undefined,
-      startTime: Timestamp.fromDate(startDate),
-      endTime: Timestamp.fromDate(endDate),
+      startTime: startDate,
+      endTime: endDate,
       timezone: meetingType.availability?.timezone || "UTC",
       attendees,
       conferencingTool: meetResult ? "google_meet" : "google_meet",

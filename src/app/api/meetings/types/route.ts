@@ -3,7 +3,7 @@ import { withAuth } from "@/lib/api/middleware";
 import {
   createMeetingType,
   getMeetingTypes,
-} from "@/lib/firebase/meeting-types";
+} from "@/lib/firebase/server-admin";
 
 export async function GET(req: NextRequest) {
   return withAuth(req, async (ctx) => {

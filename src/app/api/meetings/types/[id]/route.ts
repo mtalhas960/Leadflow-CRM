@@ -4,7 +4,7 @@ import {
   getMeetingType,
   updateMeetingType,
   deleteMeetingType,
-} from "@/lib/firebase/meeting-types";
+} from "@/lib/firebase/server-admin";
 
 export async function PATCH(
   req: NextRequest,
@@ -17,7 +17,8 @@ export async function PATCH(
       if (!existing) {
         return NextResponse.json({ error: "Meeting type not found" }, { status: 404 });
       }
-      if (existing.workspaceId !== ctx.workspaceId) {
+      const existingData = existing as Record<string, unknown>;
+      if (existingData.workspaceId !== ctx.workspaceId) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
 
@@ -46,7 +47,8 @@ export async function DELETE(
       if (!existing) {
         return NextResponse.json({ error: "Meeting type not found" }, { status: 404 });
       }
-      if (existing.workspaceId !== ctx.workspaceId) {
+      const existingData = existing as Record<string, unknown>;
+      if (existingData.workspaceId !== ctx.workspaceId) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
 

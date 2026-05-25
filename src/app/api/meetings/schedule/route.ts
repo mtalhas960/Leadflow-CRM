@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createGoogleMeetEvent } from "@/lib/calendar";
-import { createMeeting } from "@/lib/firebase/meetings";
-import { logMeeting } from "@/lib/firebase/activities";
-import { Timestamp } from "firebase/firestore";
+import { createMeeting, logMeeting } from "@/lib/firebase/server-admin";
 import { withAuth } from "@/lib/api/middleware";
 
 export async function POST(req: NextRequest) {
@@ -76,8 +74,8 @@ export async function POST(req: NextRequest) {
         leadId: leadId || undefined,
         title: title.trim(),
         description: description || undefined,
-        startTime: Timestamp.fromDate(startDate),
-        endTime: Timestamp.fromDate(endDate),
+        startTime: startDate,
+        endTime: endDate,
         timezone: meetingTimezone,
         attendees: meetingAttendees,
         conferencingTool: meetResult ? "google_meet" : "google_meet",
