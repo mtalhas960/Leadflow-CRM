@@ -34,8 +34,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { sendPasswordResetEmail } from "firebase/auth";
-import { auth } from "@/lib/firebase/client";
 import { ACCENT_OPTIONS, useAccent, type AccentColor } from "@/contexts/accent-context";
 import { useWorkspace } from "@/contexts/workspace-context";
 import { renderInviteEmail } from "@/lib/email-templates";
@@ -145,11 +143,19 @@ export default function SettingsPage() {
     }
     setResettingPwd(true);
     try {
-      await sendPasswordResetEmail(auth, firebaseUser.email);
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: firebaseUser.email }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to send reset email");
+        return;
+      }
       toast.success("Password reset email sent! Check your inbox.");
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Failed to send reset email";
-      toast.error(message);
+    } catch {
+      toast.error("Failed to send reset email. Please try again.");
     } finally {
       setResettingPwd(false);
     }
