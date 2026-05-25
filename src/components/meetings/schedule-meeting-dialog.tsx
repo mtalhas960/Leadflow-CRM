@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -19,7 +19,6 @@ import {
   CheckCircle2,
   ChevronLeft,
   Clock,
-  Copy,
   Loader2,
   Video,
   X,
