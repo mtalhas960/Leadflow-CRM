@@ -34,6 +34,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { sendPasswordResetEmail } from "firebase/auth";
+import { auth } from "@/lib/firebase/client";
 import { ACCENT_OPTIONS, useAccent, type AccentColor } from "@/contexts/accent-context";
 import { useWorkspace } from "@/contexts/workspace-context";
 import { renderInviteEmail } from "@/lib/email-templates";
@@ -134,6 +136,24 @@ export default function SettingsPage() {
   const [profileName, setProfileName] = useState(user?.displayName || "");
   const [profilePhotoURL, setProfilePhotoURL] = useState(user?.photoURL || "");
   const [savingProfile, setSavingProfile] = useState(false);
+  const [resettingPwd, setResettingPwd] = useState(false);
+
+  const handleResetPassword = async () => {
+    if (!firebaseUser?.email) {
+      toast.error("No email address on file");
+      return;
+    }
+    setResettingPwd(true);
+    try {
+      await sendPasswordResetEmail(auth, firebaseUser.email);
+      toast.success("Password reset email sent! Check your inbox.");
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to send reset email";
+      toast.error(message);
+    } finally {
+      setResettingPwd(false);
+    }
+  };
 
   const isOwner = activeWorkspace?.ownerId === user?.id;
   const { stats, refreshStats } = useLeadStore();
@@ -534,6 +554,15 @@ export default function SettingsPage() {
                   <p className="text-xs text-muted-foreground">
                     Your email address is managed through Firebase Authentication and cannot be changed here.
                   </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleResetPassword}
+                    disabled={resettingPwd}
+                    className="mt-1"
+                  >
+                    {resettingPwd ? "Sending..." : "Reset Password"}
+                  </Button>
                 </div>
 
                 <Button onClick={handleSaveProfile} disabled={savingProfile}>
