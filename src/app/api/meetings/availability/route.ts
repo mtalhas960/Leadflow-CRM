@@ -51,6 +51,10 @@ export async function GET(req: NextRequest) {
       name: meetingType.name,
       duration: meetingType.duration,
       bufferTime: meetingType.bufferTime || 0,
+      bufferBefore: meetingType.bufferBefore,
+      bufferAfter: meetingType.bufferAfter,
+      minimumNotice: meetingType.minimumNotice,
+      dailyLimit: meetingType.dailyLimit,
       availability: meetingType.availability,
     };
 

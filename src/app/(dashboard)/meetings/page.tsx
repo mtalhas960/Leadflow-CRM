@@ -23,6 +23,7 @@ import {
   AlertCircle,
   Calendar,
   Clock,
+  Copy,
   ExternalLink,
   Loader2,
   MoreHorizontal,
@@ -37,6 +38,8 @@ import type { Meeting } from "@/types";
 import type { MeetingType } from "@/lib/firebase/meeting-types";
 import { format, isAfter, isBefore, isToday, isTomorrow } from "date-fns";
 import type { Timestamp } from "firebase/firestore";
+
+const BOOKING_BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 // ─── Helpers ───────────────────────────────────────────────────────
 
@@ -53,12 +56,74 @@ function getMeetingStatusInfo(status: Meeting["status"]) {
   }
 }
 
-function formatMeetingDate(startTime: Timestamp | { toDate: () => Date } | null | undefined): string {
+function formatMeetingDate(
+  startTime: Timestamp | { toDate: () => Date } | null | undefined,
+  meetingTimezone?: string
+): string {
   if (!startTime?.toDate) return "";
   const date = startTime.toDate();
-  if (isToday(date)) return `Today, ${format(date, "h:mm a")}`;
-  if (isTomorrow(date)) return `Tomorrow, ${format(date, "h:mm a")}`;
-  return format(date, "MMM d, yyyy · h:mm a");
+
+  let timeStr: string;
+  if (meetingTimezone) {
+    // Format in the meeting's timezone using Intl
+    try {
+      const tzDateStr = date.toLocaleString("en-US", {
+        timeZone: meetingTimezone,
+        hour12: true,
+        hour: "numeric",
+        minute: "2-digit",
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+      // Get timezone abbreviation
+      const tzShort = date.toLocaleString("en-US", {
+        timeZone: meetingTimezone,
+        timeZoneName: "short",
+      });
+      const tzParts = tzShort.split(" ");
+      const tzAbbr = tzParts[tzParts.length - 1] || "";
+      timeStr = `${tzDateStr} ${tzAbbr}`;
+    } catch {
+      timeStr = format(date, "MMM d, yyyy · h:mm a");
+    }
+  } else {
+    timeStr = format(date, "MMM d, yyyy · h:mm a");
+  }
+
+  // For "today" and "tomorrow" checks, use the meeting's timezone
+  if (meetingTimezone) {
+    try {
+      const now = new Date();
+      const nowInTz = now.toLocaleString("en-US", {
+        timeZone: meetingTimezone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      });
+      const meetingInTz = date.toLocaleString("en-US", {
+        timeZone: meetingTimezone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      });
+      if (nowInTz === meetingInTz) return `Today, ${timeStr.split(", ").slice(1).join(", ")}`;
+      // Tomorrow check
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowInTz = tomorrow.toLocaleString("en-US", {
+        timeZone: meetingTimezone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      });
+      if (tomorrowInTz === meetingInTz) return `Tomorrow, ${timeStr.split(", ").slice(1).join(", ")}`;
+    } catch {
+      // fall through to default format
+    }
+  }
+
+  return timeStr;
 }
 
 function formatDuration(startTime: Timestamp | { toDate: () => Date } | null | undefined, endTime: Timestamp | { toDate: () => Date } | null | undefined): string {
@@ -253,21 +318,37 @@ export default function MeetingsPage() {
 
       {/* Meeting Types Bar */}
       {meetingTypes.length > 0 && (
-        <div className="flex items-center gap-2 overflow-x-auto pb-1">
-          <span className="text-xs font-medium text-muted-foreground shrink-0">
+        <div className="flex items-center gap-1 overflow-x-auto pb-1">
+          <span className="text-xs font-medium text-muted-foreground shrink-0 mr-1">
             Quick create:
           </span>
           {meetingTypes.map((mt) => (
-            <Button
-              key={mt.id}
-              variant="outline"
-              size="sm"
-              className="shrink-0"
-              onClick={() => setScheduleOpen(true)}
-            >
-              <Clock className="mr-1.5 h-3 w-3" />
-              {mt.name}
-            </Button>
+            <div key={mt.id} className="flex shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-r-none border-r-0"
+                onClick={() => setScheduleOpen(true)}
+              >
+                <Clock className="mr-1.5 h-3 w-3" />
+                {mt.name}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-l-none px-2"
+                onClick={() => {
+                  const url = mt.slug
+                    ? `${BOOKING_BASE_URL}/schedule/${mt.slug}`
+                    : `${BOOKING_BASE_URL}/b/${mt.bookingToken}`;
+                  navigator.clipboard.writeText(url);
+                  toast.success("Booking link copied!");
+                }}
+                title="Copy booking link"
+              >
+                <Copy className="h-3 w-3" />
+              </Button>
+            </div>
           ))}
           <Button
             variant="ghost"
@@ -484,7 +565,7 @@ function MeetingCard({
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-sm text-muted-foreground">
               <span className="flex items-center gap-1">
                 <Clock className="h-3.5 w-3.5" />
-                {formatMeetingDate(meeting.startTime)}
+                {formatMeetingDate(meeting.startTime, meeting.timezone)}
               </span>
               <span>{formatDuration(meeting.startTime, meeting.endTime)}</span>
               {meeting.attendees.length > 0 && (

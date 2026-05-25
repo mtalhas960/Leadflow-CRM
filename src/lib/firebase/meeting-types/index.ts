@@ -23,10 +23,16 @@ export interface MeetingType {
   name: string;
   duration: number; // minutes
   bufferTime: number; // minutes between meetings
+  bufferBefore?: number;
+  bufferAfter?: number;
+  minimumNotice?: number;
+  dailyLimit?: number;
   videoTool: "google_meet" | "none";
   description: string;
   /** Public booking token — auto-generated on create */
   bookingToken: string;
+  /** Human-readable URL slug (e.g. "30-min-discovery-call") */
+  slug?: string;
   /** Availability windows for booking page */
   availability?: {
     daysOfWeek: number[]; // 0=Sun, 1=Mon, ...
@@ -55,8 +61,16 @@ function generateBookingToken(): string {
 
 /* ─── Create ─────────────────────────────────────────────────────── */
 
+function generateSlugFromName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 50) || "meeting";
+}
+
 export async function createMeetingType(
-  data: Omit<MeetingType, "id" | "bookingToken" | "createdAt" | "updatedAt">
+  data: Omit<MeetingType, "id" | "bookingToken" | "slug" | "createdAt" | "updatedAt">
 ): Promise<string> {
   const docData: Record<string, unknown> = {
     workspaceId: data.workspaceId,
@@ -66,8 +80,8 @@ export async function createMeetingType(
     videoTool: data.videoTool,
     description: data.description,
     bookingToken: generateBookingToken(),
+    slug: generateSlugFromName(data.name),
     active: data.active ?? true,
-    createdBy: data.createdBy,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };

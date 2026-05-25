@@ -20,6 +20,10 @@ export interface MeetingTypeBookingInfo {
   name: string;
   duration: number; // minutes
   bufferTime: number; // minutes gap before/after each meeting
+  bufferBefore?: number; // minutes buffer before each meeting
+  bufferAfter?: number; // minutes buffer after each meeting
+  minimumNotice?: number; // minutes advance notice required
+  dailyLimit?: number; // max meetings per day
   availability?: MeetingTypeAvailability;
   timezone?: string;
 }
@@ -145,7 +149,13 @@ export async function computeAvailableSlots(
     // Non-critical — proceed without conflict checking
   }
 
-  // 5. Filter slots
+  // 5. Enforce minimum notice: slots must be at least `minimumNotice` minutes from now
+  const minNotice = meetingType.minimumNotice || 0;
+
+  // 6. Enforce daily limit: count existing meetings on this date
+  const dailyLimit = meetingType.dailyLimit || 0;
+
+  // 7. Filter slots
   const available = slots.filter((slotTime) => {
     const slotStart = parseTime(slotTime);
     const slotEnd = slotStart + slotDuration;
@@ -155,7 +165,16 @@ export async function computeAvailableSlots(
       if (slotStart <= nowMinutes) return false;
     }
 
-    // Check overlap with existing meetings (with buffer time)
+    // Enforce minimum notice
+    if (minNotice > 0) {
+      const slotEarliestTime = nowMinutes + minNotice;
+      if (slotStart < slotEarliestTime) return false;
+    }
+
+    // Enforce daily limit
+    if (dailyLimit > 0 && existingMeetings.length >= dailyLimit) return false;
+
+    // Check overlap with existing meetings (with buffer)
     const buffer = meetingType.bufferTime || 0;
     for (const meeting of existingMeetings) {
       if (overlaps(slotStart, slotEnd, meeting.startMinutes, meeting.endMinutes, buffer)) {

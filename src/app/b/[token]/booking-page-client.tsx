@@ -53,14 +53,40 @@ function formatDate(date: Date): string {
 }
 
 
-function getTimezoneAbbr(timezone: string): string {
+/**
+ * Get the timezone abbreviation (e.g. "EDT", "GMT+5", "PKT")
+ * for a given IANA timezone at a specific date.
+ * Uses the meeting date so DST transitions are handled correctly.
+ */
+function getTimezoneAbbr(timezone: string, date?: Date): string {
   try {
+    // Use the provided date (meeting date) or fall back to current date
+    const targetDate = date || new Date();
+    // Use "longOffset" to get explicit GMT offset like "GMT-04:00"
+    const formatted = new Intl.DateTimeFormat("en-US", {
+      timeZone: timezone,
+      timeZoneName: "longOffset",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(targetDate);
+    // Extract the GMT offset from format like "05/28/2026, 14:30:00 GMT-04:00"
+    const gmtMatch = formatted.match(/GMT[+-]\d{2}:\d{2}/);
+    if (gmtMatch) return gmtMatch[0];
+
+    // Fallback: try short name like "EDT"
     const short = new Intl.DateTimeFormat("en-US", {
       timeZone: timezone,
       timeZoneName: "short",
-    }).format(new Date());
-    const parts = short.split(", ");
-    return parts[parts.length - 1] || timezone;
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(targetDate);
+    const parts = short.split(" ");
+    const last = parts[parts.length - 1];
+    if (last && last.length <= 5) return last;
+
+    // Final fallback — return the IANA name
+    return timezone.split("/").pop() || timezone;
   } catch {
     return timezone;
   }
@@ -74,20 +100,20 @@ function formatSlotTime(time24: string): string {
   return `${h12}:${m.toString().padStart(2, "0")} ${period}`;
 }
 
-/** Format "HH:MM" → "9:00 AM EDT" */
-function formatSlotWithTz(time24: string, tz: string): string {
+/** Format "HH:MM" → "9:00 AM GMT-04:00" using the meeting date */
+function formatSlotWithTz(time24: string, tz: string, date?: Date): string {
   try {
-    return `${formatSlotTime(time24)} ${getTimezoneAbbr(tz)}`;
+    return `${formatSlotTime(time24)} ${getTimezoneAbbr(tz, date)}`;
   } catch {
     return formatSlotTime(time24);
   }
 }
 
-/** Generate an array of Dates for the next 30 days that match daysOfWeek */
+/** Generate an array of Dates for today + next 30 days that match daysOfWeek */
 function generateAvailableDates(daysOfWeek: number[]): Date[] {
   const dates: Date[] = [];
   const today = new Date();
-  for (let i = 1; i <= 30; i++) {
+  for (let i = 0; i <= 30; i++) {
     const d = new Date(today);
     d.setDate(d.getDate() + i);
     if (daysOfWeek.includes(d.getDay())) {
@@ -262,7 +288,7 @@ export function BookingPageClient({ token }: BookingPageClientProps) {
         (data.slots || []).map((s: string) => ({
           time: s,
           display: formatSlotTime(s),
-          label: formatSlotWithTz(s, tz),
+          label: formatSlotWithTz(s, tz, date), // Pass date for correct DST abbreviation
         }))
       );
     } catch (err: unknown) {
@@ -368,7 +394,7 @@ export function BookingPageClient({ token }: BookingPageClientProps) {
       setBooked(true);
       setBookedSlot({
         date: formatDate(selectedDate),
-        time: formatSlotWithTz(selectedTime, tz),
+        time: formatSlotWithTz(selectedTime, tz, selectedDate),
       });
     } catch {
       toast.error("Something went wrong");
@@ -379,7 +405,7 @@ export function BookingPageClient({ token }: BookingPageClientProps) {
 
   // ── Derived values ─────────────────────────────────────────────
   const tzLabel = meetingType?.availability?.timezone
-    ? `${getTimezoneAbbr(meetingType.availability.timezone)} (${meetingType.availability.timezone})`
+    ? `${getTimezoneAbbr(meetingType.availability.timezone, selectedDate || availableDates[0] || new Date())} (${meetingType.availability.timezone})`
     : "";
   const monthLabel = new Intl.DateTimeFormat("en-US", {
     month: "long",
@@ -561,7 +587,7 @@ export function BookingPageClient({ token }: BookingPageClientProps) {
                         calendarMonth < today.getMonth()) ||
                       (calendarYear === today.getFullYear() &&
                         calendarMonth === today.getMonth() &&
-                        day <= today.getDate());
+                        day < today.getDate());
 
                     return (
                       <button
@@ -676,8 +702,8 @@ export function BookingPageClient({ token }: BookingPageClientProps) {
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Clock className="h-3.5 w-3.5 shrink-0" />
                       <span>
-                        {selectedTime
-                          ? formatSlotWithTz(selectedTime, meetingType.availability?.timezone || "UTC")
+                        {selectedTime && selectedDate
+                          ? formatSlotWithTz(selectedTime, meetingType.availability?.timezone || "UTC", selectedDate)
                           : ""}{" "}
                         &middot; {meetingType.duration} min
                       </span>
