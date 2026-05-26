@@ -15,6 +15,7 @@ dist/
 
 # Production
 /build
+/scripts
 
 # Misc
 .DS_Store
