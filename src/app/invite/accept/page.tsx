@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { auth, db } from "@/lib/firebase/client";
-import { acceptInvite } from "@/lib/firebase/workspaces";
+import { getApiAuthHeaders } from "@/lib/api/client";
 import { toast } from "@/lib/toast";
 import {
   createUserWithEmailAndPassword,
@@ -178,7 +178,18 @@ function AcceptInviteContent() {
         lastActiveAt: Timestamp.now(),
       });
 
-      await acceptInvite(inviteId!, cred.user.uid);
+      const res = await fetch("/api/workspaces/invite/accept", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(await getApiAuthHeaders(invite.workspaceId)),
+        },
+        body: JSON.stringify({ inviteId: inviteId! }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to accept invite");
+      }
 
       setPhase("success");
       setTimeout(() => router.push("/dashboard"), 2000);
@@ -305,7 +316,18 @@ function AcceptInviteContent() {
       await fsetDoc(userRef, { workspaceRoles, updatedAt: Timestamp.now() }, { merge: true });
     }
 
-    await acceptInvite(inviteId!, uid);
+    const res = await fetch("/api/workspaces/invite/accept", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(await getApiAuthHeaders(invite.workspaceId)),
+      },
+      body: JSON.stringify({ inviteId: inviteId! }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || "Failed to accept invite");
+    }
 
     setPhase("success");
     setTimeout(() => router.push("/dashboard"), 2000);
