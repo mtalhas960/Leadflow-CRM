@@ -139,17 +139,17 @@ function baseHtml(emailBody: string, opts?: BaseEmailOptions): string {
 function buttonHtml(url: string, label: string): string {
   return `
   <!--[if mso]>
-  <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${url}" style="height:48px;v-text-anchor:middle;width:220px;" arcsize="8" stroke="f" fillcolor="#2563eb">
+  <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${url}" style="height:46px;v-text-anchor:middle;width:220px;" arcsize="6" stroke="f" fillcolor="#1e293b">
     <w:anchorlock/>
-    <center style="color:#ffffff;font-family:'Segoe UI',Tahoma,sans-serif;font-size:15px;font-weight:600;">${label}</center>
+    <center style="color:#ffffff;font-family:'Segoe UI',Tahoma,sans-serif;font-size:14px;font-weight:600;">${label}</center>
   </v:roundrect>
   <![endif]-->
   <!--[if !mso]><!-->
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
     <tr>
-      <td align="center" style="border-radius:8px; background-color:#2563eb;">
-        <a href="${url}" target="_blank" rel="noopener noreferrer" style="display:inline-block; padding:14px 36px; font-size:15px; font-weight:600; color:#ffffff; text-decoration:none; border-radius:8px; background-color:#2563eb; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; mso-hide:all;">
-          ${label}&nbsp;&rarr;
+      <td align="center" style="border-radius:6px; background-color:#1e293b;">
+        <a href="${url}" target="_blank" rel="noopener noreferrer" style="display:inline-block; padding:12px 32px; font-size:14px; font-weight:600; color:#ffffff; text-decoration:none; border-radius:6px; background-color:#1e293b; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; mso-hide:all;">
+          ${label}
         </a>
       </td>
     </tr>
@@ -184,14 +184,13 @@ export function renderInviteEmail(opts: InviteEmailOptions): string {
     <!-- Heading -->
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 4px 0;">
       <tr>
-        <td style="font-size:13px; font-weight:600; color:#2563eb; letter-spacing:0.5px; text-transform:uppercase; padding-bottom:8px;">
-          Workspace Invitation
+        <td style="font-size:12px; font-weight:600; color:#64748b; letter-spacing:0.4px; text-transform:uppercase; padding-bottom:8px;">
+          Workspace Access
         </td>
       </tr>
       <tr>
-        <td style="font-size:24px; font-weight:700; color:#1e293b; letter-spacing:-0.3px; line-height:1.3;">
-          You&apos;re invited to join<br />
-          <span style="color:#2563eb;">${escapeHtml(workspaceName)}</span>
+        <td style="font-size:22px; font-weight:700; color:#0f172a; letter-spacing:-0.2px; line-height:1.35;">
+          Invitation to join ${escapeHtml(workspaceName)}
         </td>
       </tr>
     </table>
@@ -200,11 +199,11 @@ export function renderInviteEmail(opts: InviteEmailOptions): string {
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:16px 0 24px 0;">
       <tr>
         <td style="font-size:16px; line-height:1.6; color:#475569;">
-          <p style="margin:0 0 16px 0;">
-            <strong style="color:#1e293b;">${escapeHtml(inviterName)}</strong> has invited you to join their workspace on LeadFlow CRM.
+          <p style="margin:0 0 12px 0;">
+            <strong style="color:#0f172a;">${escapeHtml(inviterName)}</strong> has invited you to access the ${escapeHtml(workspaceName)} workspace in LeadFlow CRM.
           </p>
-          <p style="margin:0 0 16px 0;">
-            LeadFlow CRM helps teams manage leads, track pipelines, and close deals faster — all in one place.
+          <p style="margin:0;">
+            Accept the invitation to proceed.
           </p>
         </td>
       </tr>
@@ -214,12 +213,12 @@ export function renderInviteEmail(opts: InviteEmailOptions): string {
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0;">
       <tr>
         <td style="font-size:14px; color:#475569; padding:0;">
-          Your role will be:
+          Access level:
         </td>
         <td style="padding:0 0 0 8px;">
-          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-radius:4px; background-color:#eff6ff; border:1px solid #bfdbfe;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-radius:4px; border:1px solid #e2e8f0;">
             <tr>
-              <td style="padding:4px 12px; font-size:13px; font-weight:600; color:#2563eb; text-transform:capitalize;">
+              <td style="padding:4px 12px; font-size:13px; font-weight:600; color:#0f172a; text-transform:capitalize;">
                 ${escapeHtml(inviteRole)}
               </td>
             </tr>
@@ -233,13 +232,13 @@ export function renderInviteEmail(opts: InviteEmailOptions): string {
     <!-- CTA -->
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 16px 0;">
       <tr>
-        <td style="font-size:15px; font-weight:600; color:#1e293b; padding-bottom:16px;">
-          Accept this invitation
+        <td style="font-size:15px; font-weight:600; color:#0f172a; padding-bottom:16px;">
+          Accept the invitation
         </td>
       </tr>
       <tr>
         <td align="center">
-          ${buttonHtml(acceptUrl, "Accept Invitation")}
+          ${buttonHtml(acceptUrl, "Accept invitation")}
         </td>
       </tr>
     </table>
@@ -250,7 +249,7 @@ export function renderInviteEmail(opts: InviteEmailOptions): string {
         <td style="font-size:13px; line-height:1.5; color:#94a3b8;">
           <p style="margin:0;">
             This invitation expires in <strong style="color:#64748b;">7 days</strong>.
-            If you don&apos;t have an account, you&apos;ll be prompted to create one when you accept.
+            If you do not yet have an account, you will be asked to create one when you accept.
           </p>
         </td>
       </tr>
@@ -258,7 +257,7 @@ export function renderInviteEmail(opts: InviteEmailOptions): string {
   `;
 
   return baseHtml(body, {
-    previewText: `Join ${workspaceName} on LeadFlow CRM — ${inviterName} has invited you.`,
+    previewText: `Invitation to join ${workspaceName} from ${inviterName}.`,
   });
 }
 

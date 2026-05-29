@@ -70,6 +70,7 @@ import {
   FileText,
   KanbanSquare,
   ListFilter,
+  Loader2,
   LogOut,
   Mail,
   Palette,
@@ -126,6 +127,7 @@ export default function SettingsPage() {
   const [inviteRole, setInviteRole] = useState<"admin" | "member" | "viewer">("member");
   const [inviting, setInviting] = useState(false);
   const [pendingInvites, setPendingInvites] = useState<(WorkspaceInvite & { id: string })[]>([]);
+  const [processingInvites, setProcessingInvites] = useState<Set<string>>(new Set());
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [leaving, setLeaving] = useState(false);
@@ -330,18 +332,28 @@ export default function SettingsPage() {
 
   const handleCancelInvite = async (inviteId: string, email: string) => {
     if (!activeWorkspace) return;
+    if (processingInvites.has(inviteId)) return;
+    setProcessingInvites((prev) => new Set(prev).add(inviteId));
     try {
       await cancelInvite(inviteId);
       toast.success(`Invite to ${email} cancelled`);
       setPendingInvites((prev) => prev.filter((i) => i.id !== inviteId));
     } catch {
       toast.error("Failed to cancel invite");
+    } finally {
+      setProcessingInvites((prev) => {
+        const next = new Set(prev);
+        next.delete(inviteId);
+        return next;
+      });
     }
   };
 
   const handleResendInvite = async (invite: WorkspaceInvite) => {
     if (!activeWorkspace || !firebaseUser) return;
-    const toastId = toast.loading("Resending invitation...");
+    if (processingInvites.has(invite.id)) return;
+    setProcessingInvites((prev) => new Set(prev).add(invite.id));
+    toast.info("Resending invitation...");
     try {
       const res = await fetch("/api/workspaces/invite/resend", {
         method: "POST",
@@ -355,7 +367,6 @@ export default function SettingsPage() {
 
       const data = await res.json();
       if (!res.ok) {
-        toast.dismiss(toastId);
         if (data.code === "resend_cooldown") {
           toast.error(data.error);
         } else {
@@ -364,7 +375,6 @@ export default function SettingsPage() {
         return;
       }
 
-      toast.dismiss(toastId);
       toast.success(
         data.emailSent
           ? `Invitation re-sent to ${invite.email}`
@@ -382,8 +392,13 @@ export default function SettingsPage() {
         )
       );
     } catch {
-      toast.dismiss(toastId);
       toast.error("Failed to resend invitation");
+    } finally {
+      setProcessingInvites((prev) => {
+        const next = new Set(prev);
+        next.delete(invite.id);
+        return next;
+      });
     }
   };
 
@@ -891,18 +906,28 @@ export default function SettingsPage() {
                           <Button
                             variant="ghost"
                             size="sm"
+                            disabled={processingInvites.has(invite.id)}
                             onClick={() => handleResendInvite(invite)}
                           >
-                            <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                            {processingInvites.has(invite.id) ? (
+                              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                            )}
                             Resend
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            disabled={processingInvites.has(invite.id)}
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10 disabled:opacity-40"
                             onClick={() => handleCancelInvite(invite.id, invite.email)}
                           >
-                            <XCircle className="mr-1.5 h-3.5 w-3.5" />
+                            {processingInvites.has(invite.id) ? (
+                              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <XCircle className="mr-1.5 h-3.5 w-3.5" />
+                            )}
                             Cancel
                           </Button>
                         </div>

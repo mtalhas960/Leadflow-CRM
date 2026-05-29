@@ -1,12 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +11,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -22,34 +20,38 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Mail, Send, Save, FileText, Loader2, Eye, MousePointer, ChevronDown, ChevronUp } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/lib/toast";
+import { ChevronDown, ChevronUp, Eye, FileText, Loader2, Mail, MousePointer, Save, Send } from "lucide-react";
+import { useState } from "react";
 
 const EMAIL_TEMPLATES = [
   {
     id: "cold-outreach",
     name: "Cold Outreach",
-    subject: "Quick question about {{company}}",
+    subject: "Introduction regarding {{company}}",
     body: `Hi {{firstName}},
 
-I came across {{company}} and noticed you're doing interesting work in the industry.
+I am reaching out to introduce myself and see if a brief discussion about {{company}}'s priorities would be useful.
 
-I'd love to connect and explore if there's a potential fit for collaboration. Would you be open to a quick 15-minute call next week?
+If appropriate, are you available for a short call next week?
 
-Best regards,
+Regards,
 {{sender}}`,
   },
   {
     id: "follow-up",
     name: "Follow-up",
-    subject: "Following up - {{company}}",
+    subject: "Following up regarding {{company}}",
     body: `Hi {{firstName}},
 
-Just following up on my previous email. I wanted to see if you had a chance to review it.
+Following up on my earlier note regarding {{company}}.
 
-I'm still very interested in connecting and would appreciate any time you could spare.
+If this is not the right contact, please let me know who I should reach.
 
-Best,
+If a short call would be useful, I can share times.
+
+Regards,
 {{sender}}`,
   },
   {
@@ -58,29 +60,29 @@ Best,
     subject: "Proposal for {{company}}",
     body: `Hi {{firstName}},
 
-Thank you for your time on our call. As discussed, I've put together a proposal tailored to {{company}}'s needs.
+Thank you for your time. As discussed, I have prepared a proposal tailored to {{company}}.
 
 Key highlights:
 - [Point 1]
 - [Point 2]
 - [Point 3]
 
-I'd love to walk you through the details. Are you available for a follow-up call this week?
+Please let me know if you would like a brief walkthrough this week.
 
-Best regards,
+Regards,
 {{sender}}`,
   },
   {
     id: "check-in",
     name: "Check-in",
-    subject: "Checking in",
+    subject: "Checking in regarding {{company}}",
     body: `Hi {{firstName}},
 
-Hope you're doing well! I wanted to check in and see how things are going at {{company}}.
+Checking in regarding {{company}}'s upcoming priorities.
 
-If there's anything I can help with or if you'd like to catch up, I'm here.
+If there is a better time to reconnect, I can adjust.
 
-Best,
+Regards,
 {{sender}}`,
   },
 ];
