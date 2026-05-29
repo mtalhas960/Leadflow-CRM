@@ -371,6 +371,27 @@
   animation: pageEnter 0.2s ease-out;
 }
 
+@utility anim-hidden {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+@utility anim-fade-up {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+@utility anim-fade-left {
+  animation: fadeInLeft 0.6s ease-out forwards;
+}
+
+@utility anim-fade-right {
+  animation: fadeInRight 0.6s ease-out forwards;
+}
+
+@utility anim-fade {
+  animation: fadeIn 0.6s ease-out forwards;
+}
+
 /* ============================================
    SKELETON LOADING
    ============================================ */

@@ -1,51 +1,68 @@
 "use client";
 
+import {
+  AnimatedSection,
+  FeatureSection,
+  MockupInbox,
+  MockupInsights,
+  MockupPipeline,
+  MockupTime,
+} from "@/components/landing";
 import { Button } from "@/components/ui/button";
 import { auth } from "@/lib/firebase/client";
 import { onAuthStateChanged } from "firebase/auth";
 import {
-  BarChart3,
   Check,
   Clock,
-  KanbanSquare,
   ShieldCheck,
   Sparkles,
+  Star,
+  Users,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-const features = [
-  {
-    title: "Pipeline clarity",
-    description:
-      "Track every lead stage with ownership, next steps, and clean handoffs.",
-    icon: KanbanSquare,
-  },
-  {
-    title: "Time and revenue focus",
-    description:
-      "Capture billable work and link effort to pipeline value without extra tools.",
-    icon: Clock,
-  },
-  {
-    title: "Actionable reporting",
-    description:
-      "See win rates, cycle time, and forecast signals at a glance.",
-    icon: BarChart3,
-  },
-];
-
-const benefits = [
-  "Role based access and workspace controls",
-  "Audit friendly activity history",
-  "Fast onboarding with templates",
-];
-
-const metrics = [
-  { label: "Uptime target", value: "99.9%" },
+const highlights = [
   { label: "Setup time", value: "10 min" },
-  { label: "Time to first lead", value: "1 day" },
+  { label: "Avg response lift", value: "26%" },
+  { label: "Active teams", value: "1,200+" },
+];
+
+const outcomes = [
+  {
+    title: "Pipeline visibility",
+    description: "Every stage, next step, and owner stays visible without spreadsheet drift.",
+  },
+  {
+    title: "Shared execution",
+    description: "Align sales, ops, and services in one workspace with clear handoffs.",
+  },
+  {
+    title: "Revenue signals",
+    description: "Get forecasts and conversion signals that stay readable at scale.",
+  },
+];
+
+const proof = [
+  {
+    quote:
+      "We went from a messy spreadsheet to a pipeline that updates itself in every standup.",
+    name: "Ariana Holt",
+    role: "Growth Lead, Fieldstack",
+  },
+  {
+    quote:
+      "The shared inbox and time tracking cut response time in half for our team.",
+    name: "Marcus Lee",
+    role: "RevOps Manager, Harbor",
+  },
+  {
+    quote:
+      "Analytics finally match our workflow. We track value and effort in the same view.",
+    name: "Priya Das",
+    role: "Founder, Sunpath Studio",
+  },
 ];
 
 export default function LandingPage() {
@@ -80,14 +97,15 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden">
+    <div className="min-h-screen overflow-x-hidden">
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-24 right-[-10%] h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
-        <div className="absolute bottom-[-10%] left-[-5%] h-64 w-64 rounded-full bg-primary/5 blur-3xl" />
+        <div className="absolute -top-32 right-[-10%] h-80 w-80 rounded-full bg-primary/15 blur-3xl" />
+        <div className="absolute bottom-[-15%] left-[-10%] h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
+        <div className="absolute left-1/2 top-20 h-48 w-72 -translate-x-1/2 rounded-full bg-white/10 blur-3xl" />
         <div className="absolute inset-0 bg-grid opacity-60" />
       </div>
 
-      <header className="sticky top-0 z-20 border-b border-border/60 bg-background/80 backdrop-blur">
+      <header className="sticky top-0 z-20 border-b border-border/60 bg-background/70 backdrop-blur">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/70 text-primary-foreground font-bold text-sm">
@@ -95,16 +113,11 @@ export default function LandingPage() {
             </div>
             <span className="text-lg font-semibold tracking-tight">LeadFlow</span>
           </div>
-          <nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
-            <a className="hover:text-foreground" href="#features">
-              Features
-            </a>
-            <a className="hover:text-foreground" href="#security">
-              Security
-            </a>
-            <a className="hover:text-foreground" href="#cta">
-              Get started
-            </a>
+          <nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex" aria-label="Primary">
+            <a className="hover:text-foreground" href="#platform">Platform</a>
+            <a className="hover:text-foreground" href="#features">Features</a>
+            <a className="hover:text-foreground" href="#security">Security</a>
+            <a className="hover:text-foreground" href="#cta">Get started</a>
           </nav>
           <div className="flex items-center gap-3">
             <Link href="/login" className="text-sm text-muted-foreground hover:text-foreground">
@@ -118,19 +131,18 @@ export default function LandingPage() {
       </header>
 
       <main className="relative z-10">
-        <section className="mx-auto w-full max-w-6xl px-6 pb-16 pt-20">
+        <section id="hero" className="mx-auto w-full max-w-6xl px-6 pb-14 pt-20">
           <div className="grid items-center gap-12 lg:grid-cols-2">
             <div className="space-y-6">
               <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-1 text-xs text-muted-foreground">
                 <Sparkles className="h-3.5 w-3.5" />
-                Built for modern sales teams
+                Built for teams that move fast
               </div>
               <h1 className="font-display text-4xl font-semibold leading-tight tracking-tight sm:text-5xl">
-                LeadFlow keeps your pipeline clean, fast, and revenue focused.
+                LeadFlow keeps every lead visible, every handoff clean, and every team aligned.
               </h1>
               <p className="text-base text-muted-foreground sm:text-lg">
-                A simple CRM for teams that need clarity on every lead. Track
-                outreach, manage time, and forecast confidently without bloat.
+                Replace spreadsheets with a shared command center. Track pipeline, messages, and time in one place without the noise.
               </p>
               <div className="flex flex-wrap gap-3">
                 <Button asChild size="lg">
@@ -151,11 +163,11 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
-            <div className="rounded-2xl border border-border/60 bg-card/80 p-6 shadow-xl shadow-primary/5">
+            <div className="glass-card p-6 shadow-xl shadow-primary/5">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-foreground">Pipeline snapshot</p>
-                  <p className="text-xs text-muted-foreground">This week</p>
+                  <p className="text-sm font-medium text-foreground">Command center</p>
+                  <p className="text-xs text-muted-foreground">Today</p>
                 </div>
                 <div className="rounded-full border border-border/60 px-2.5 py-1 text-xs text-muted-foreground">
                   Updated live
@@ -183,7 +195,7 @@ export default function LandingPage() {
                 ))}
               </div>
               <div className="mt-6 grid gap-3 sm:grid-cols-3">
-                {metrics.map((metric) => (
+                {highlights.map((metric) => (
                   <div
                     key={metric.label}
                     className="rounded-lg border border-border/60 bg-background/60 px-3 py-2"
@@ -197,118 +209,170 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section
-          id="features"
-          className="mx-auto w-full max-w-6xl scroll-mt-24 px-6 py-16"
-        >
-          <div className="grid gap-10 lg:grid-cols-[1.1fr_1fr]">
-            <div className="space-y-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                Built for focus
-              </p>
-              <h2 className="font-display text-3xl font-semibold tracking-tight">
-                Enterprise polish without the enterprise overhead.
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                LeadFlow keeps your team aligned with a clean pipeline, real time
-                collaboration, and reporting that stays readable at scale.
-              </p>
-              <div className="mt-6 space-y-3">
-                {benefits.map((benefit) => (
-                  <div key={benefit} className="flex items-center gap-2 text-sm">
-                    <Check className="h-4 w-4 text-primary" />
-                    <span className="text-muted-foreground">{benefit}</span>
-                  </div>
-                ))}
+        <section id="platform" className="mx-auto w-full max-w-6xl px-6 py-12">
+          <AnimatedSection className="grid gap-6 lg:grid-cols-3" variant="up">
+            {outcomes.map((item) => (
+              <div key={item.title} className="glass-card p-6">
+                <h3 className="text-base font-semibold text-foreground">{item.title}</h3>
+                <p className="mt-2 text-sm text-muted-foreground">{item.description}</p>
               </div>
-            </div>
-            <div className="grid gap-4">
-              {features.map((feature) => (
-                <div
-                  key={feature.title}
-                  className="rounded-xl border border-border/60 bg-card/80 p-5"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                      <feature.icon className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">
-                        {feature.title}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {feature.description}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+            ))}
+          </AnimatedSection>
         </section>
 
-        <section
-          id="security"
-          className="scroll-mt-24 border-t border-border/60 bg-background/70"
-        >
+        <div id="features" className="scroll-mt-24">
+          <AnimatedSection variant="right" className="bg-white/5">
+            <FeatureSection
+              badge="Pipeline"
+              title="Keep deals moving with absolute stage clarity."
+              description="LeadFlow keeps every stage visible so your team can act on the next best move, not chase updates."
+              bullets={[
+                "Stage ownership and next-step reminders stay attached to every lead.",
+                "Spot stalled deals with real-time stage movement.",
+                "Share pipeline snapshots instantly with leadership.",
+              ]}
+              linkText="See the pipeline"
+              linkHref="/pipeline"
+              imageSide="right"
+            >
+              <MockupPipeline />
+            </FeatureSection>
+          </AnimatedSection>
+
+          <AnimatedSection variant="left">
+            <FeatureSection
+              badge="Messaging"
+              badgeTone="warning"
+              title="Run outreach like a shared inbox, not a guessing game."
+              description="Bring team conversations, lead messages, and meeting follow-ups into a single, accountable view."
+              bullets={[
+                "Shared threads keep your team aligned on every reply.",
+                "Surface urgent leads with status and follow-up cues.",
+                "Keep response times fast without losing context.",
+              ]}
+              linkText="Open messages"
+              linkHref="/messages"
+              imageSide="left"
+              bulletIcon="arrow"
+            >
+              <MockupInbox />
+            </FeatureSection>
+          </AnimatedSection>
+
+          <AnimatedSection variant="right" className="bg-white/5">
+            <FeatureSection
+              badge="Insights"
+              title="Forecast with confidence using metrics that stay readable."
+              description="Track revenue, win rates, and cycle times in one analytics layer so teams stay focused on priorities."
+              bullets={[
+                "Live KPI cards for leadership updates.",
+                "Date ranges and exports for investor-ready reporting.",
+                "Alignment between pipeline value and workload.",
+              ]}
+              linkText="View analytics"
+              linkHref="/analytics"
+              imageSide="right"
+            >
+              <MockupInsights />
+            </FeatureSection>
+          </AnimatedSection>
+
+          <AnimatedSection variant="left">
+            <FeatureSection
+              badge="Time"
+              badgeTone="warning"
+              title="Connect time, effort, and revenue in the same view."
+              description="Track billable work and operational effort so your team can protect margins and spot delivery risks early."
+              bullets={[
+                "Timer and manual entries keep delivery on track.",
+                "See billable effort alongside pipeline value.",
+                "Quickly translate effort into forecasts.",
+              ]}
+              linkText="Track time"
+              linkHref="/time-tracker"
+              imageSide="left"
+            >
+              <MockupTime />
+            </FeatureSection>
+          </AnimatedSection>
+        </div>
+
+        <section id="security" className="scroll-mt-24 border-t border-border/60 bg-background/70">
           <div className="mx-auto w-full max-w-6xl px-6 py-14">
-            <div className="grid gap-8 lg:grid-cols-[1fr_1.2fr]">
+            <AnimatedSection className="grid gap-8 lg:grid-cols-[1fr_1.2fr]" variant="up">
               <div className="space-y-3">
                 <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
                   Security and control
                 </p>
                 <h3 className="font-display text-2xl font-semibold tracking-tight">
-                  Keep data protected with clear permissions and audit trails.
+                  Permissioned access, audit trails, and predictable compliance.
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  LeadFlow is built around workspaces, role based access, and
-                  activity history so teams can stay accountable.
+                  Workspace roles, audit logs, and export tooling keep admins confident and teams aligned.
                 </p>
               </div>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-2">
                 {[
-                  "Workspace roles",
-                  "Activity history",
-                  "Secure auth",
-                  "Data export",
+                  "Role-based module access",
+                  "Audit log for lead actions",
+                  "Workspace member governance",
+                  "Flexible exports for reporting",
                 ].map((item) => (
-                  <div
-                    key={item}
-                    className="flex items-center gap-2 rounded-lg border border-border/60 bg-card/80 px-4 py-3 text-sm"
-                  >
-                    <ShieldCheck className="h-4 w-4 text-primary" />
-                    <span className="text-muted-foreground">{item}</span>
+                  <div key={item} className="glass-card p-4 text-sm text-muted-foreground flex items-center justify-center">
+                    {item}
                   </div>
                 ))}
               </div>
-            </div>
+            </AnimatedSection>
           </div>
         </section>
 
-        <section
-          id="cta"
-          className="mx-auto w-full max-w-6xl scroll-mt-24 px-6 py-16"
-        >
-          <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-primary/15 via-background to-background px-8 py-10">
-            <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
-              <div className="space-y-2">
-                <h4 className="font-display text-2xl font-semibold tracking-tight">
-                  Ready to run a faster pipeline?
-                </h4>
-                <p className="text-sm text-muted-foreground">
-                  Get started in minutes and keep your team aligned from day one.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                <Button asChild size="lg">
-                  <Link href="/register">Start free</Link>
-                </Button>
-                <Button asChild variant="outline" size="lg">
-                  <Link href="/login">View dashboard</Link>
-                </Button>
-              </div>
+        <section id="proof" className="mx-auto w-full max-w-6xl px-6 py-16">
+          <AnimatedSection className="text-center" variant="fade">
+            <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-1 text-xs text-muted-foreground">
+              <Star className="h-3.5 w-3.5" />
+              Trusted by growth teams
             </div>
+            <h3 className="mt-4 font-display text-2xl font-semibold tracking-tight">
+              Teams switching to LeadFlow ship faster, together.
+            </h3>
+          </AnimatedSection>
+          <div className="mt-10 grid gap-4 md:grid-cols-3">
+            {proof.map((item) => (
+              <AnimatedSection key={item.name} className="glass-card p-6" variant="up">
+                <p className="text-sm text-muted-foreground">&quot;{item.quote}&quot;</p>
+                <div className="mt-4 text-sm font-semibold text-foreground">{item.name}</div>
+                <div className="text-xs text-muted-foreground">{item.role}</div>
+              </AnimatedSection>
+            ))}
           </div>
+        </section>
+
+        <section id="cta" className="mx-auto w-full max-w-6xl px-6 pb-20">
+          <AnimatedSection className="glass-card p-8 text-center" variant="up">
+            <div className="flex items-center justify-center gap-2 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+              <Users className="h-4 w-4" />
+              Start with your team today
+            </div>
+            <h3 className="mt-4 font-display text-2xl font-semibold tracking-tight">
+              Ready to build a pipeline your whole team trusts?
+            </h3>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Create your workspace, invite teammates, and see your first pipeline in minutes.
+            </p>
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <Button asChild size="lg">
+                <Link href="/register">Start free</Link>
+              </Button>
+              <Button asChild variant="outline" size="lg">
+                <Link href="/login">Sign in</Link>
+              </Button>
+            </div>
+            <div className="mt-4 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+              <Clock className="h-4 w-4" />
+              Average setup time under 10 minutes.
+            </div>
+          </AnimatedSection>
         </section>
       </main>
 
