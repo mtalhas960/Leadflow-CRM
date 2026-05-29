@@ -21,7 +21,7 @@ import { useState, useCallback } from "react";
 import { toast } from "@/lib/toast";
 
 export function KanbanBoard({ onLeadClick }: { onLeadClick?: (leadId: string) => void }) {
-  const { activeWorkspace } = useWorkspace();
+  const { activeWorkspace, user } = useWorkspace();
   const { leads, updateStatus } = useLeadStore();
   const [activeLead, setActiveLead] = useState<Lead | null>(null);
   const [insertState, setInsertState] = useState<{
@@ -116,7 +116,7 @@ export function KanbanBoard({ onLeadClick }: { onLeadClick?: (leadId: string) =>
     }
 
     if (newStatus && newStatus !== lead.status) {
-      updateStatus(leadId, newStatus);
+      updateStatus(leadId, newStatus, user?.id, user?.displayName);
       const stageName = stages.find((s) => s.id === newStatus)?.name;
       toast.success(`Moved ${lead.firstName} ${lead.lastName} to ${stageName}`);
     }

@@ -348,7 +348,7 @@ export default function LeadsPage() {
     if (selectedIds.size === 0) return;
     const count = selectedIds.size;
     try {
-      await removeLeads(Array.from(selectedIds));
+      await removeLeads(Array.from(selectedIds), user?.id, user?.displayName);
       clearSelection();
       toast.success(`${count} lead${count > 1 ? "s" : ""} deleted`);
     } catch {
@@ -357,13 +357,13 @@ export default function LeadsPage() {
   };
 
   const handleStatusChange = (leadId: string, status: string) => {
-    useLeadStore.getState().updateStatus(leadId, status);
+    useLeadStore.getState().updateStatus(leadId, status, user?.id, user?.displayName);
     toast.success("Status updated");
   };
 
   const handleDeleteFromActions = async (leadId: string) => {
     try {
-      await useLeadStore.getState().removeLead(leadId);
+      await useLeadStore.getState().removeLead(leadId, user?.id, user?.displayName);
       toast.success("Lead deleted");
     } catch {
       toast.error("Failed to delete lead");
@@ -383,11 +383,18 @@ export default function LeadsPage() {
     if (!activeWorkspace || !user) return;
     const { createLead } = await import("@/lib/firebase/firestore");
     for (const data of leadData) {
-      await createLead({
+      const newId = await createLead({
         ...data,
         workspaceId: activeWorkspace.id,
         createdBy: user.id,
       });
+      // Audit log for each imported lead (fire-and-forget)
+      if (user.displayName) {
+        const leadName = `${data.firstName} ${data.lastName}`.trim();
+        import("@/lib/firebase/activities").then(({ logLeadCreated }) => {
+          logLeadCreated(newId, activeWorkspace.id, user.id, user.displayName, leadName);
+        }).catch(() => {});
+      }
     }
     initialize(activeWorkspace.id);
     refreshStats(activeWorkspace.id);
@@ -742,7 +749,7 @@ export default function LeadsPage() {
                                     lastName={lead.lastName}
                                     onSave={async (val) => {
                                       const { firstName, lastName } = val as { firstName: string; lastName: string };
-                                      editLead(lead.id, { firstName, lastName });
+                                      editLead(lead.id, { firstName, lastName }, user?.id, user?.displayName);
                                     }}
                                   />
                                 </div>
@@ -752,7 +759,7 @@ export default function LeadsPage() {
                                     value={lead.email}
                                     onSave={async (val) => {
                                       const emailVal = val as string | null;
-                                      editLead(lead.id, { email: emailVal || "" });
+                                      editLead(lead.id, { email: emailVal || "" }, user?.id, user?.displayName);
                                     }}
                                   />
                                 </p>
@@ -777,7 +784,7 @@ export default function LeadsPage() {
                               placeholder="—"
                               onSave={async (val) => {
                                 const v = val as string | null;
-                                editLead(lead.id, { company: v || undefined });
+                                editLead(lead.id, { company: v || undefined }, user?.id, user?.displayName);
                               }}
                             />
                           </td>
@@ -792,7 +799,7 @@ export default function LeadsPage() {
                               placeholder="—"
                               onSave={async (val) => {
                                 const v = val as string | null;
-                                editLead(lead.id, { website: v || undefined });
+                                editLead(lead.id, { website: v || undefined }, user?.id, user?.displayName);
                               }}
                             />
                           </td>
@@ -804,7 +811,7 @@ export default function LeadsPage() {
                             <CountrySelect
                               value={lead.country || ""}
                               onChange={async (v) => {
-                                editLead(lead.id, { country: v || undefined });
+                                editLead(lead.id, { country: v || undefined }, user?.id, user?.displayName);
                               }}
                               placeholder="—"
                               inline
@@ -857,7 +864,7 @@ export default function LeadsPage() {
                               placeholder="—"
                               onSave={async (val) => {
                                 const v = val as number | null;
-                                editLead(lead.id, { value: v ?? undefined });
+                                editLead(lead.id, { value: v ?? undefined }, user?.id, user?.displayName);
                               }}
                             />
                           </td>
@@ -904,6 +911,18 @@ export default function LeadsPage() {
                           await updateLead(lead.id, { customFields: merged }).catch(() => {
                             initialize(activeWorkspace?.id || "");
                           });
+                          // Audit log (fire-and-forget)
+                          if (current && user?.id && user?.displayName) {
+                            const leadName = `${current.firstName} ${current.lastName}`.trim();
+                            const oldCF = { ...(current.customFields || {}) };
+                            import("@/lib/firebase/activities").then(({ logLeadUpdated }) => {
+                              logLeadUpdated(
+                                lead.id, current.workspaceId, user.id, user.displayName,
+                                leadName, { customFields: oldCF } as Record<string, unknown>,
+                                { customFields: merged } as Record<string, unknown>
+                              );
+                            }).catch(() => {});
+                          }
                         };
 
                         const inlineType = cf.type === "number" ? "number" :
@@ -920,6 +939,8 @@ export default function LeadsPage() {
                                 customField={cf}
                                 value={rawValue}
                                 leadId={lead.id}
+                                userId={user?.id}
+                                userName={user?.displayName}
                               />
                             ) : inlineType === "checkbox" ? (
                               <InlineEditCell
@@ -972,6 +993,7 @@ export default function LeadsPage() {
             <LeadForm
               onSuccess={handleCreateSuccess}
               userId={user?.id || ""}
+              userName={user?.displayName || ""}
               workspaceId={activeWorkspace?.id || ""}
               customFields={activeWorkspace?.customFields || []}
             />

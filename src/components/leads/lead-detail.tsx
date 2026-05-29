@@ -178,7 +178,7 @@ export function LeadDetail({ leadId }: LeadDetailProps) {
       return;
     }
     const fromStatus = lead.status;
-    updateStatus(lead.id, status);
+    updateStatus(lead.id, status, user?.id, user?.displayName);
     setLead({ ...lead, status });
 
     // Log activity

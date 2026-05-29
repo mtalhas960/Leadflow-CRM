@@ -27,9 +27,10 @@ interface LeadFormProps {
   workspaceId: string;
   defaultValues?: Partial<LeadFormData>;
   customFields?: CustomField[];
+  userName?: string;
 }
 
-export function LeadForm({ onSuccess, userId, workspaceId, defaultValues, customFields = [] }: LeadFormProps) {
+export function LeadForm({ onSuccess, userId, workspaceId, defaultValues, customFields = [], userName }: LeadFormProps) {
   const [submitting, setSubmitting] = useState(false);
   const addLead = useLeadStore((s) => s.addLead);
   // Default select custom fields to first option
@@ -76,7 +77,7 @@ export function LeadForm({ onSuccess, userId, workspaceId, defaultValues, custom
         }
       }
 
-      await addLead(workspaceId, userId, data, customFieldValues);
+      await addLead(workspaceId, userId, data, customFieldValues, userName);
       onSuccess();
     } catch {
       toast.error("Failed to create lead");

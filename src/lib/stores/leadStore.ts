@@ -13,6 +13,19 @@ import {
 } from "@/lib/firebase/firestore";
 import type { LeadFormData } from "@/lib/schemas/lead";
 
+// Audit logging helpers (imported dynamically to keep bundle small)
+async function audit(
+  fn: "logLeadCreated" | "logLeadUpdated" | "logLeadDeleted",
+  ...args: unknown[]
+) {
+  try {
+    const { [fn]: auditFn } = await import("@/lib/firebase/activities");
+    await (auditFn as (...a: unknown[]) => Promise<void>)(...args);
+  } catch {
+    // Audit failures are non-critical — don't disrupt the user
+  }
+}
+
 const PAGE_SIZE = 200;
 
 interface LeadState {
@@ -36,11 +49,11 @@ interface LeadState {
   initialize: (workspaceId: string) => Promise<void>;
   initializeAll: (workspaceId: string) => Promise<void>;
   loadMore: (workspaceId: string) => Promise<void>;
-  addLead: (workspaceId: string, userId: string, data: LeadFormData, customFields?: Record<string, unknown>) => Promise<void>;
-  editLead: (id: string, data: Partial<LeadFormData>) => Promise<void>;
-  removeLead: (id: string) => Promise<void>;
-  removeLeads: (ids: string[]) => Promise<void>;
-  updateStatus: (id: string, status: string) => Promise<void>;
+  addLead: (workspaceId: string, userId: string, data: LeadFormData, customFields?: Record<string, unknown>, userName?: string) => Promise<void>;
+  editLead: (id: string, data: Partial<LeadFormData>, userId?: string, userName?: string) => Promise<void>;
+  removeLead: (id: string, userId?: string, userName?: string) => Promise<void>;
+  removeLeads: (ids: string[], userId?: string, userName?: string) => Promise<void>;
+  updateStatus: (id: string, status: string, userId?: string, userName?: string) => Promise<void>;
   setSearchQuery: (query: string) => void;
   toggleSelect: (id: string) => void;
   selectAll: () => void;
@@ -122,7 +135,7 @@ export const useLeadStore = create<LeadState>((set, get) => ({
     }
   },
 
-  addLead: async (workspaceId: string, userId: string, data: LeadFormData, customFields?: Record<string, unknown>) => {
+  addLead: async (workspaceId: string, userId: string, data: LeadFormData, customFields?: Record<string, unknown>, userName?: string) => {
     set({ loading: true, error: null });
     try {
       const now = Timestamp.now();
@@ -155,6 +168,7 @@ export const useLeadStore = create<LeadState>((set, get) => ({
         createdBy: userId,
       });
       // Append new lead to local state (no reload needed)
+      const leadName = `${data.firstName} ${data.lastName}`.trim();
       const newLead: Lead = {
         id: newId,
         workspaceId,
@@ -192,6 +206,10 @@ export const useLeadStore = create<LeadState>((set, get) => ({
         totalCount: state.totalCount + 1,
         loading: false,
       }));
+      // Audit log (fire-and-forget)
+      if (userName) {
+        audit("logLeadCreated", newId, workspaceId, userId, userName, leadName);
+      }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Failed to create lead";
       set({ error: message, loading: false });
@@ -199,8 +217,11 @@ export const useLeadStore = create<LeadState>((set, get) => ({
     }
   },
 
-  editLead: async (id: string, data: Partial<LeadFormData>) => {
+  editLead: async (id: string, data: Partial<LeadFormData>, userId?: string, userName?: string) => {
     try {
+      // Capture old values for audit before modifying
+      const currentLead = get().leads.find((l) => l.id === id);
+
       const updateData: Partial<Lead> = {};
       if (data.firstName !== undefined) updateData.firstName = data.firstName;
       if (data.lastName !== undefined) updateData.lastName = data.lastName;
@@ -227,6 +248,20 @@ export const useLeadStore = create<LeadState>((set, get) => ({
         leads: state.leads.map((l) => (l.id === id ? { ...l, ...updateData } : l)),
         filteredLeads: state.filteredLeads.map((l) => (l.id === id ? { ...l, ...updateData } : l)),
       }));
+
+      // Audit log (fire-and-forget)
+      if (currentLead && userId && userName) {
+        const leadName = `${currentLead.firstName} ${currentLead.lastName}`.trim();
+        const oldValue = { ...currentLead };
+        // Only send changed fields as newValue
+        const newValue: Record<string, unknown> = {};
+        for (const key of Object.keys(updateData) as (keyof Lead)[]) {
+          if (key in updateData) {
+            newValue[key] = updateData[key];
+          }
+        }
+        audit("logLeadUpdated", id, currentLead.workspaceId, userId, userName, leadName, oldValue, newValue);
+      }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Failed to update lead";
       set({ error: message });
@@ -234,13 +269,18 @@ export const useLeadStore = create<LeadState>((set, get) => ({
     }
   },
 
-  removeLead: async (id: string) => {
+  removeLead: async (id: string, userId?: string, userName?: string) => {
     try {
+      const currentLead = get().leads.find((l) => l.id === id);
       await deleteLead(id);
       set((state) => ({
         leads: state.leads.filter((l) => l.id !== id),
         filteredLeads: state.filteredLeads.filter((l) => l.id !== id),
       }));
+      if (currentLead && userId && userName) {
+        const leadName = `${currentLead.firstName} ${currentLead.lastName}`.trim();
+        audit("logLeadDeleted", id, currentLead.workspaceId, userId, userName, leadName);
+      }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Failed to delete lead";
       set({ error: message });
@@ -248,9 +288,10 @@ export const useLeadStore = create<LeadState>((set, get) => ({
     }
   },
 
-  removeLeads: async (ids: string[]) => {
+  removeLeads: async (ids: string[], userId?: string, userName?: string) => {
     set({ loading: true, error: null });
     try {
+      const deletedLeads = get().leads.filter((l) => ids.includes(l.id));
       await deleteLeads(ids);
       set((state) => ({
         leads: state.leads.filter((l) => !ids.includes(l.id)),
@@ -258,6 +299,12 @@ export const useLeadStore = create<LeadState>((set, get) => ({
         selectedIds: new Set(),
         loading: false,
       }));
+      if (userId && userName) {
+        for (const lead of deletedLeads) {
+          const leadName = `${lead.firstName} ${lead.lastName}`.trim();
+          audit("logLeadDeleted", lead.id, lead.workspaceId, userId, userName, leadName);
+        }
+      }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Failed to delete leads";
       set({ error: message, loading: false });
@@ -265,10 +312,12 @@ export const useLeadStore = create<LeadState>((set, get) => ({
     }
   },
 
-  updateStatus: async (id: string, status: string) => {
+  updateStatus: async (id: string, status: string, userId?: string, userName?: string) => {
     // Optimistic update: move card immediately in UI, then sync to Firestore in background
     const prevLeads = get().leads;
     const prevFiltered = get().filteredLeads;
+    const currentLead = get().leads.find((l) => l.id === id);
+    const oldStatus = currentLead?.status;
 
     set((state) => ({
       leads: state.leads.map((l) => (l.id === id ? { ...l, status } : l)),
@@ -277,6 +326,14 @@ export const useLeadStore = create<LeadState>((set, get) => ({
 
     try {
       await updateLead(id, { status });
+      // Audit log (fire-and-forget)
+      if (currentLead && userId && userName) {
+        const leadName = `${currentLead.firstName} ${currentLead.lastName}`.trim();
+        audit("logLeadUpdated", id, currentLead.workspaceId, userId, userName, leadName,
+          oldStatus ? { status: oldStatus } as Record<string, unknown> : null,
+          { status } as Record<string, unknown>
+        );
+      }
     } catch (error: unknown) {
       // Revert on failure
       set({ leads: prevLeads, filteredLeads: prevFiltered });

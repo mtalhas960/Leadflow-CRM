@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { CustomField } from "@/types";
 import { updateLead } from "@/lib/firebase/firestore";
 import { useLeadStore } from "@/lib/stores/leadStore";
+import { logLeadUpdated } from "@/lib/firebase/activities";
 import {
   Select,
   SelectContent,
@@ -22,6 +23,8 @@ interface SelectFieldCellProps {
   customField: CustomField;
   value: unknown;
   leadId: string;
+  userId?: string;
+  userName?: string;
 }
 
 const OPTION_COLORS = [
@@ -46,13 +49,26 @@ function getCurrentCustomFields(leadId: string): Record<string, unknown> {
   return { ...(lead?.customFields || {}) };
 }
 
-function SelectCell({ customField, value, leadId }: SelectFieldCellProps) {
+function auditCFChange(leadId: string, userId: string | undefined, userName: string | undefined, oldMerge: Record<string, unknown>, newMerge: Record<string, unknown>) {
+  if (!userId || !userName) return;
+  const lead = useLeadStore.getState().leads.find((l) => l.id === leadId);
+  if (!lead) return;
+  const leadName = `${lead.firstName} ${lead.lastName}`.trim();
+  logLeadUpdated(
+    leadId, lead.workspaceId, userId, userName,
+    leadName, { customFields: oldMerge } as Record<string, unknown>,
+    { customFields: newMerge } as Record<string, unknown>
+  ).catch(() => {});
+}
+
+function SelectCell({ customField, value, leadId, userId, userName }: SelectFieldCellProps) {
   const [open, setOpen] = useState(false);
   const selectedText = typeof value === "string" ? value : "";
 
   const handleChange = (newValue: string) => {
+    const oldMerge = getCurrentCustomFields(leadId);
     const merged = {
-      ...getCurrentCustomFields(leadId),
+      ...oldMerge,
       [customField.id]: newValue,
     };
     // Optimistic update
@@ -61,6 +77,7 @@ function SelectCell({ customField, value, leadId }: SelectFieldCellProps) {
       filteredLeads: s.filteredLeads.map((l) => l.id === leadId ? { ...l, customFields: merged } : l),
     }));
     updateLead(leadId, { customFields: merged });
+    auditCFChange(leadId, userId, userName, oldMerge, merged);
     setOpen(false);
   };
 
@@ -98,7 +115,7 @@ function SelectCell({ customField, value, leadId }: SelectFieldCellProps) {
   );
 }
 
-function MultiSelectCell({ customField, value, leadId }: SelectFieldCellProps) {
+function MultiSelectCell({ customField, value, leadId, userId, userName }: SelectFieldCellProps) {
   const [open, setOpen] = useState(false);
   const selectedValues: string[] = Array.isArray(value) ? value : [];
 
@@ -106,8 +123,9 @@ function MultiSelectCell({ customField, value, leadId }: SelectFieldCellProps) {
     const next = selectedValues.includes(option)
       ? selectedValues.filter((v) => v !== option)
       : [...selectedValues, option];
+    const oldMerge = getCurrentCustomFields(leadId);
     const merged = {
-      ...getCurrentCustomFields(leadId),
+      ...oldMerge,
       [customField.id]: next,
     };
     // Optimistic update
@@ -116,6 +134,7 @@ function MultiSelectCell({ customField, value, leadId }: SelectFieldCellProps) {
       filteredLeads: s.filteredLeads.map((l) => l.id === leadId ? { ...l, customFields: merged } : l),
     }));
     updateLead(leadId, { customFields: merged });
+    auditCFChange(leadId, userId, userName, oldMerge, merged);
   };
 
   const options = customField.options || [];
@@ -183,9 +202,9 @@ function MultiSelectCell({ customField, value, leadId }: SelectFieldCellProps) {
   );
 }
 
-export function SelectFieldCell({ customField, value, leadId }: SelectFieldCellProps) {
+export function SelectFieldCell({ customField, value, leadId, userId, userName }: SelectFieldCellProps) {
   if (customField.type === "multiselect") {
-    return <MultiSelectCell customField={customField} value={value} leadId={leadId} />;
+    return <MultiSelectCell customField={customField} value={value} leadId={leadId} userId={userId} userName={userName} />;
   }
-  return <SelectCell customField={customField} value={value} leadId={leadId} />;
+  return <SelectCell customField={customField} value={value} leadId={leadId} userId={userId} userName={userName} />;
 }

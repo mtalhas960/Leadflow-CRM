@@ -255,8 +255,8 @@ export default function AuditLogPage() {
       <div className="space-y-6">
         {/* Filter Panel */}
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 mb-4">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm font-medium">Filters</span>
               <Button
@@ -299,12 +299,12 @@ export default function AuditLogPage() {
                       <User className="h-3.5 w-3.5 text-muted-foreground" />
                       User
                     </label>
-                    <Select value={userFilter} onValueChange={setUserFilter}>
+                    <Select value={userFilter || "__all__"} onValueChange={(val) => setUserFilter(val === "__all__" ? "" : val)}>
                       <SelectTrigger>
                         <SelectValue placeholder="All users" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All users</SelectItem>
+                        <SelectItem value="__all__">All users</SelectItem>
                         {uniqueUsers().map(([id, name]) => (
                           <SelectItem key={id} value={id}>
                             {name}
@@ -318,12 +318,12 @@ export default function AuditLogPage() {
                       <Activity className="h-3.5 w-3.5 text-muted-foreground" />
                       Action Type
                     </label>
-                    <Select value={actionFilter} onValueChange={setActionFilter}>
+                    <Select value={actionFilter || "__all__"} onValueChange={(val) => setActionFilter(val === "__all__" ? "" : val)}>
                       <SelectTrigger>
                         <SelectValue placeholder="All actions" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All actions</SelectItem>
+                        <SelectItem value="__all__">All actions</SelectItem>
                         {ACTION_OPTIONS.map((opt) => (
                           <SelectItem key={opt.value} value={opt.value}>
                             {opt.label}
