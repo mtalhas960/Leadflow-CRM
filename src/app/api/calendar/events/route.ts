@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
       if (!status.connected) {
         return NextResponse.json(
           { error: "Google Calendar not connected", connected: false },
-          { status: 401 }
+          { status: 200 }
         );
       }
 
