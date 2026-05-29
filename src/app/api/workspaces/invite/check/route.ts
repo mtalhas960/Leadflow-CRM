@@ -21,7 +21,15 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const db = getAdminDb();
+    let db;
+    try {
+      db = getAdminDb();
+    } catch {
+      return NextResponse.json(
+        { error: "Server configuration error. Please contact the workspace owner." },
+        { status: 500 }
+      );
+    }
     const inviteRef = db.collection(INVITES_COLLECTION).doc(inviteId);
     const inviteSnap = await inviteRef.get();
 
