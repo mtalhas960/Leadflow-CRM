@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { auth, db } from "@/lib/firebase/client";
-import { acceptInvite, getWorkspace } from "@/lib/firebase/workspaces";
+import { acceptInvite } from "@/lib/firebase/workspaces";
 import { toast } from "@/lib/toast";
 import {
   createUserWithEmailAndPassword,
@@ -762,28 +762,13 @@ function LeftPanel({ invite }: { invite: InviteDetails | null }) {
 // ─── Fetch full invite details ──────────────────────────────────────────────
 
 async function loadInviteDetails(inviteId: string): Promise<(InviteDetails & { status: string }) | null> {
-  const { doc: fdoc, getDoc: fgetDoc } = await import("firebase/firestore");
-  const { db: fdb } = await import("@/lib/firebase/client");
-
-  const inviteRef = fdoc(fdb, "workspace_invites", inviteId);
-  const snap = await fgetDoc(inviteRef);
-  if (!snap.exists()) return null;
-
-  const data = snap.data();
-
-  let workspaceName = "Unknown Workspace";
   try {
-    const workspace = await getWorkspace(data.workspaceId);
-    if (workspace) workspaceName = workspace.name;
-  } catch {}
-
-  return {
-    workspaceId: data.workspaceId,
-    workspaceName,
-    email: data.email,
-    role: data.role,
-    status: data.status,
-  };
+    const res = await fetch(`/api/workspaces/invite/check?inviteId=${encodeURIComponent(inviteId)}`);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
 }
 
 // ─── Page component ────────────────────────────────────────────────────────
