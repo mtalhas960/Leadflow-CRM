@@ -3,6 +3,7 @@
  * Given a meeting type's availability settings and a date,
  * computes which time slots are available for booking.
  */
+import "server-only";
 import { getAdminDb } from "@/lib/firebase/admin";
 
 const SLOT_INTERVAL = 30; // minutes between slot starts

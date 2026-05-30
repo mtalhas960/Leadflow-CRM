@@ -23,7 +23,23 @@ export async function PATCH(
       }
 
       const body = await req.json();
-      await updateMeetingType(id, body);
+      // Whitelist allowed updatable fields to prevent overwriting protected fields
+      const allowedFields = [
+        "name",
+        "duration",
+        "description",
+        "availability",
+        "videoTool",
+        "bookingQuestions",
+        "confirmationPage",
+        "redirectUrl",
+        "isActive",
+      ];
+      const updateData: Record<string, unknown> = {};
+      for (const field of allowedFields) {
+        if (field in body) updateData[field] = body[field];
+      }
+      await updateMeetingType(id, updateData);
 
       return NextResponse.json({ success: true });
     } catch (error) {

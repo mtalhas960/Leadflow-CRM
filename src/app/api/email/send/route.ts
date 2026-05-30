@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { collection, addDoc, Timestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
+import { getAdminDb } from "@/lib/firebase/admin";
+import { Timestamp } from "firebase-admin/firestore";
 import { addTrackingPixel, rewriteLinks } from "@/lib/email-tracking";
 import { withAuth } from "@/lib/api/middleware";
 
@@ -9,12 +9,8 @@ const FROM_NAME = process.env.FROM_NAME || "LeadFlow CRM";
 const EMAILS_COLLECTION = "emails";
 
 function getBaseUrl(): string {
-  if (process.env.NEXT_PUBLIC_APP_URL) {
-    return process.env.NEXT_PUBLIC_APP_URL;
-  }
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
+  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
   return "http://localhost:3000";
 }
 
@@ -44,10 +40,12 @@ export async function POST(req: NextRequest) {
       let processedHtml = html || "";
       const processedText = text || html?.replace(/<[^>]*>/g, "") || "";
 
+      const db = getAdminDb();
+
       // Create Firestore record first (needed for tracking IDs)
       let emailId = "";
       if (leadId) {
-        const docRef = await addDoc(collection(db, EMAILS_COLLECTION), {
+        const docRef = await db.collection(EMAILS_COLLECTION).add({
           workspaceId: ctx.workspaceId,
           leadId,
           to: Array.isArray(to) ? to[0] : to,
@@ -61,53 +59,52 @@ export async function POST(req: NextRequest) {
         });
         emailId = docRef.id;
 
-      // Inject tracking pixel and rewrite links
-      if (enableTracking && processedHtml) {
-        if (trackClicks !== false) {
-          processedHtml = rewriteLinks(processedHtml, emailId, baseUrl);
-        }
-        if (trackOpens !== false) {
-          processedHtml = addTrackingPixel(processedHtml, emailId, baseUrl);
+        // Inject tracking pixel and rewrite links
+        if (enableTracking && processedHtml) {
+          if (trackClicks !== false) {
+            processedHtml = rewriteLinks(processedHtml, emailId, baseUrl);
+          }
+          if (trackOpens !== false) {
+            processedHtml = addTrackingPixel(processedHtml, emailId, baseUrl);
+          }
         }
       }
-    }
 
-    // Send via Resend (lazy init to avoid crashes when env var is missing at build time)
-    const { Resend } = await import("resend");
-    const resend = new Resend(process.env.RESEND_API_KEY);
-    const recipients = Array.isArray(to) ? to : [to];
-    const result = await resend.emails.send({
-      from: `${FROM_NAME} <${FROM_EMAIL}>`,
-      to: recipients,
-      subject,
-      html: processedHtml || processedText,
-      text: processedText,
-      headers: {
-        "X-LeadFlow-Lead-Id": leadId || "",
-        "X-LeadFlow-Workspace-Id": ctx.workspaceId,
-      ...(emailId ? { "X-LeadFlow-Email-Id": emailId } : {})},
-    });
+      // Send via Resend (lazy init to avoid crashes when env var is missing at build time)
+      const { Resend } = await import("resend");
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      const recipients = Array.isArray(to) ? to : [to];
+      const result = await resend.emails.send({
+        from: `${FROM_NAME} <${FROM_EMAIL}>`,
+        to: recipients,
+        subject,
+        html: processedHtml || processedText,
+        text: processedText,
+        headers: {
+          "X-LeadFlow-Lead-Id": leadId || "",
+          "X-LeadFlow-Workspace-Id": ctx.workspaceId,
+          ...(emailId ? { "X-LeadFlow-Email-Id": emailId } : {}),
+        },
+      });
 
-    if (result.error) {
-      console.error("Resend email error:", result.error);
-      return NextResponse.json(
-        { error: result.error.message },
-        { status: 500 }
-      );
-    }
-
-    // Update Firestore record with Resend ID
-    if (emailId && result.data?.id) {
-      const { doc, updateDoc } = await import("firebase/firestore");
-      try {
-        await updateDoc(doc(db, EMAILS_COLLECTION, emailId), {
-          resendId: result.data.id,
-        });
-      } catch {
-        // Non-critical — log but don't fail
-        console.warn("Failed to update email record with resendId");
+      if (result.error) {
+        console.error("Resend email error:", result.error);
+        return NextResponse.json(
+          { error: "Failed to send email" },
+          { status: 500 }
+        );
       }
-    }
+
+      // Update Firestore record with Resend ID
+      if (emailId && result.data?.id) {
+        try {
+          await db.collection(EMAILS_COLLECTION).doc(emailId).update({
+            resendId: result.data.id,
+          });
+        } catch {
+          console.warn("Failed to update email record with resendId");
+        }
+      }
 
       return NextResponse.json({
         success: true,
@@ -116,9 +113,8 @@ export async function POST(req: NextRequest) {
       });
     } catch (error) {
       console.error("Email send error:", error);
-      const message = error instanceof Error ? error.message : "Failed to send email";
       return NextResponse.json(
-        { error: message },
+        { error: "Failed to send email" },
         { status: 500 }
       );
     }

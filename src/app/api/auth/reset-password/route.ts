@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminDb, getAdminAuth } from "@/lib/firebase/admin";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 const RESET_TOKENS_COLLECTION = "password_reset_tokens";
 
@@ -12,6 +13,12 @@ const RESET_TOKENS_COLLECTION = "password_reset_tokens";
  */
 export async function POST(req: NextRequest) {
   try {
+    // Rate limit: max 10 reset attempts per IP per minute
+    const ip = getClientIp(req);
+    if (!checkRateLimit(`resetpw:${ip}`, 10, 60_000)) {
+      return NextResponse.json({ error: "Too many attempts. Please try again later." }, { status: 429 });
+    }
+
     const body = await req.json();
     const { token, newPassword } = body;
 
@@ -19,9 +26,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Token is required" }, { status: 400 });
     }
 
-    if (!newPassword || typeof newPassword !== "string" || newPassword.length < 6) {
+    if (!newPassword || typeof newPassword !== "string" || newPassword.length < 8) {
       return NextResponse.json(
-        { error: "Password must be at least 6 characters" },
+        { error: "Password must be at least 8 characters" },
         { status: 400 }
       );
     }

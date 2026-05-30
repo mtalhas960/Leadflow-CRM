@@ -25,6 +25,13 @@ function ResetPasswordForm() {
   const [done, setDone] = useState(false);
   const [resetError, setResetError] = useState("");
 
+  // Strip token from URL immediately to prevent leakage via browser history
+  useEffect(() => {
+    if (token && typeof window !== "undefined") {
+      window.history.replaceState({}, document.title, "/reset-password");
+    }
+  }, [token]);
+
   // Verify the token on mount
   useEffect(() => {
     if (!token) {
@@ -54,8 +61,8 @@ function ResetPasswordForm() {
     e.preventDefault();
     setResetError("");
 
-    if (!password || password.length < 6) {
-      setResetError("Password must be at least 6 characters");
+    if (!password || password.length < 8) {
+      setResetError("Password must be at least 8 characters");
       return;
     }
     if (password !== confirmPassword) {
@@ -167,11 +174,11 @@ function ResetPasswordForm() {
               <Input
                 id="new-password"
                 type="password"
-                placeholder="At least 6 characters"
+                placeholder="At least 8 characters"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={6}
+                minLength={8}
                 autoComplete="new-password"
               />
             </div>

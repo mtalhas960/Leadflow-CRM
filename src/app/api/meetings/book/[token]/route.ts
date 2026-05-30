@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getMeetingTypeByToken, createMeeting, getWorkspace } from "@/lib/firebase/server-admin";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { createGoogleMeetEvent } from "@/lib/calendar";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 /**
  * GET /api/meetings/book/:token
@@ -26,8 +27,8 @@ export async function GET(
       if (wsData) {
         workspaceName = (wsData as { name?: string }).name || workspaceName;
       }
-    } catch {
-      // Non-critical
+    } catch (err) {
+      console.error("Failed to fetch workspace name for meeting type, using default:", err);
     }
 
     return NextResponse.json({
@@ -60,6 +61,16 @@ export async function POST(
 ) {
   try {
     const { token } = await params;
+
+    // Rate limit: max 5 bookings per IP per hour, 10 per token per hour
+    const ip = getClientIp(req);
+    if (!checkRateLimit(`book:ip:${ip}`, 5, 3600_000)) {
+      return NextResponse.json({ error: "Too many booking attempts. Please try again later." }, { status: 429 });
+    }
+    if (!checkRateLimit(`book:token:${token}`, 10, 3600_000)) {
+      return NextResponse.json({ error: "This booking link is temporarily busy. Please try again later." }, { status: 429 });
+    }
+
     const meetingType = await getMeetingTypeByToken(token);
     if (!meetingType) {
       return NextResponse.json({ error: "Booking link not found or inactive" }, { status: 404 });
@@ -128,8 +139,8 @@ export async function POST(
           { status: 409 }
         );
       }
-    } catch {
-      // Non-critical — proceed without conflict check if query fails
+    } catch (err) {
+      console.error("Conflict detection query failed, proceeding without check:", err);
     }
 
     // Create Google Meet if enabled
@@ -149,8 +160,8 @@ export async function POST(
             });
           }
         }
-      } catch {
-        // Non-critical — meeting can exist without Meet link
+      } catch (err) {
+        console.error("Failed to create Google Meet for booking:", err);
       }
     }
 

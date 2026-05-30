@@ -3,12 +3,9 @@ import { withAuth } from "@/lib/api/middleware";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { Timestamp } from "firebase-admin/firestore";
 import { renderInviteEmail } from "@/lib/email-templates";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const INVITES_COLLECTION = "workspace_invites";
-
-// In-memory rate limiter for resend (per-invite, per-workspace)
-const resendCooldowns = new Map<string, number>();
-const RESEND_COOLDOWN_MS = 30_000; // 30 seconds
 
 function getBaseUrl(): string {
   if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL;
@@ -39,19 +36,12 @@ export async function POST(req: NextRequest) {
       }
 
       // ── Rate limiting (per inviteId + workspaceId) ──────────────
-      const rateLimitKey = `${ctx.workspaceId}:${inviteId}`;
-      const lastSent = resendCooldowns.get(rateLimitKey);
-      const now = Date.now();
-
-      if (lastSent && now - lastSent < RESEND_COOLDOWN_MS) {
-        const remainingSeconds = Math.ceil(
-          (RESEND_COOLDOWN_MS - (now - lastSent)) / 1000
-        );
+      if (!checkRateLimit(`resend:${ctx.workspaceId}:${inviteId}`, 1, 30_000)) {
         return NextResponse.json(
           {
-            error: `Please wait ${remainingSeconds} second${remainingSeconds === 1 ? "" : "s"} before resending again`,
+            error: "Please wait 30 seconds before resending again",
             code: "resend_cooldown",
-            retryAfterSeconds: remainingSeconds,
+            retryAfterSeconds: 30,
           },
           { status: 429 }
         );
@@ -139,8 +129,6 @@ export async function POST(req: NextRequest) {
             console.error("Resend error:", result.error);
           } else {
             emailSent = true;
-            // Set cooldown only on successful email send
-            resendCooldowns.set(rateLimitKey, now);
           }
         } catch (err) {
           console.error("Failed to resend invite email:", err);
@@ -157,12 +145,7 @@ export async function POST(req: NextRequest) {
     } catch (error) {
       console.error("Resend invite error:", error);
       return NextResponse.json(
-        {
-          error:
-            error instanceof Error
-              ? error.message
-              : "Failed to resend invitation",
-        },
+        { error: "Failed to resend invitation" },
         { status: 500 }
       );
     }

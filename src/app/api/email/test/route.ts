@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
 
       if (result.error) {
         return NextResponse.json(
-          { status: "error", message: result.error.message, details: result.error },
+          { error: "Failed to send test email" },
           { status: 500 }
         );
       }
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
         from: FROM_EMAIL,
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error";
+      const message = "Unknown error";
       return NextResponse.json(
         { status: "error", message },
         { status: 500 }

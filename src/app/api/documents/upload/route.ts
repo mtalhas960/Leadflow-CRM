@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cloudinary, getWorkspaceFolder, getFileType, ALLOWED_FILE_TYPES, MAX_FILE_SIZE } from "@/lib/cloudinary";
-import { db } from "@/lib/firebase/client";
-import { collection, addDoc, Timestamp } from "firebase/firestore";
+import { getAdminDb } from "@/lib/firebase/admin";
+import { Timestamp } from "firebase-admin/firestore";
 import { withAuth } from "@/lib/api/middleware";
 
 const DOCUMENTS_COLLECTION = "documents";
@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
         createdAt: Timestamp.now(),
       };
       if (leadId) docData.leadId = leadId;
-      const docRef = await addDoc(collection(db, DOCUMENTS_COLLECTION), docData);
+      const docRef = await getAdminDb().collection(DOCUMENTS_COLLECTION).add(docData);
 
       return NextResponse.json({
         success: true,
@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
       });
     } catch (error) {
       console.error("Document upload error:", error);
-      const message = error instanceof Error ? error.message : "Failed to upload document";
+      const message = "Failed to upload document";
       return NextResponse.json(
         { error: message },
         { status: 500 }

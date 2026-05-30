@@ -222,7 +222,7 @@ export async function POST(req: NextRequest) {
     } catch (error) {
       console.error("Invite error:", error);
       return NextResponse.json(
-        { error: error instanceof Error ? error.message : "Failed to invite member" },
+        { error: "Failed to invite member" },
         { status: 500 }
       );
     }

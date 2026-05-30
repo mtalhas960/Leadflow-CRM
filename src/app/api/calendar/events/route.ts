@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ event });
     } catch (error) {
       console.error("Create calendar event error:", error);
-      const message = error instanceof Error ? error.message : "Failed to create event";
+      const message = "Failed to create event";
       return NextResponse.json(
         { error: message },
         { status: 500 }
@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ events, connected: true, email: status.email });
     } catch (error) {
       console.error("Get upcoming events error:", error);
-      const message = error instanceof Error ? error.message : "Failed to get upcoming events";
+      const message = "Failed to get upcoming events";
       return NextResponse.json(
         { error: message },
         { status: 500 }
