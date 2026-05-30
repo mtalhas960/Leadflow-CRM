@@ -17,6 +17,9 @@ dist/
 /build
 /scripts
 
+# Internal docs
+/docs
+
 # Misc
 .DS_Store
 *.pem

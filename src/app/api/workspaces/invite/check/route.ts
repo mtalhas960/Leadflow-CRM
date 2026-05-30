@@ -24,7 +24,8 @@ export async function GET(req: NextRequest) {
     let db;
     try {
       db = getAdminDb();
-    } catch {
+    } catch (err) {
+      console.error("Failed to initialize Admin SDK in invite check:", err);
       return NextResponse.json(
         { error: "Server configuration error. Please contact the workspace owner." },
         { status: 500 }
@@ -86,12 +87,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error("Invite check error:", error);
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to load invitation",
-      },
+      { error: "Failed to load invitation" },
       { status: 500 }
     );
   }

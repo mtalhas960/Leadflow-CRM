@@ -71,15 +71,18 @@ export function addTrackingPixel(html: string, emailId: string, baseUrl: string)
   return `${html}${pixelHtml}`;
 }
 
+const DANGEROUS_SCHEMES = /^(javascript|data|file|vbscript|blob):/i;
+
 export function rewriteLinks(html: string, emailId: string, baseUrl: string): string {
   const trackerUrl = `${baseUrl}/api/email/track/click/${emailId}`;
 
   return html.replace(
-    /(href\s*=\s*["'])(https?:\/\/[^"']+)["']/gi,
+    /(href\s*=\s*["'])([^"']+)["']/gi,
     (match, prefix, url) => {
-      if (url.includes("/api/email/track/")) {
-        return match;
-      }
+      // Skip already-tracked links
+      if (url.includes("/api/email/track/")) return match;
+      // Only rewrite http/https links — skip dangerous schemes
+      if (!url.match(/^https?:\/\//i)) return match;
       const encodedUrl = encodeURIComponent(url);
       return `${prefix}${trackerUrl}?url=${encodedUrl}"`;
     }

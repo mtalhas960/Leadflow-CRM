@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
     } catch (error) {
       console.error("Failed to create instant meeting:", error);
 
-      const message = error instanceof Error ? error.message : "Failed to create meeting";
+      const message = "Failed to create meeting";
 
       if (message.includes("Google Calendar not connected")) {
         return NextResponse.json({ error: message, needsCalendarAuth: true }, { status: 401 });

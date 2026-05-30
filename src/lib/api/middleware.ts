@@ -11,6 +11,55 @@ export interface AuthContext {
 }
 
 /**
+ * CSRF protection: validate Origin/Referer header for mutating requests.
+ *
+ * If the Origin header is present, it must match the app's URL or be
+ * a known allowed origin. This prevents cross-site request forgery
+ * by ensuring requests originate from the app itself.
+ *
+ * NOTE: Some clients (mobile apps, Postman) don't send Origin headers.
+ * We only reject when the header IS present but DOESN'T match — not
+ * when it's absent. This preserves compatibility while blocking
+ * most CSRF attack vectors.
+ */
+function validateOrigin(req: NextRequest): NextResponse | null {
+  const method = req.method;
+  // Only validate mutating methods
+  if (!["POST", "PUT", "PATCH", "DELETE"].includes(method)) return null;
+
+  const origin = req.headers.get("origin");
+  const referer = req.headers.get("referer");
+  const source = origin || referer;
+
+  // No origin/referer header — skip check (mobile apps, direct API calls)
+  if (!source) return null;
+
+  try {
+    const allowedOrigins = [
+      process.env.NEXT_PUBLIC_APP_URL || "",
+      process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "",
+      "http://localhost:3000",
+      // Allow the request's own origin (handles dev on non-standard ports)
+      new URL(req.url).origin,
+    ].filter(Boolean);
+
+    const sourceOrigin = new URL(source).origin;
+
+    // Allow if source matches any allowed origin
+    if (allowedOrigins.some((allowed) => sourceOrigin === allowed)) return null;
+
+    // Block if origin doesn't match
+    return NextResponse.json(
+      { error: "Cross-site request blocked." },
+      { status: 403 }
+    );
+  } catch {
+    // Invalid URL in origin/referer — allow to avoid breaking valid clients
+    return null;
+  }
+}
+
+/**
  * Verifies the Firebase ID token from the Authorization header and extracts
  * the authenticated user ID. Returns the verified uid or a NextResponse error.
  */
@@ -40,12 +89,9 @@ async function verifyFirebaseToken(
   try {
     const decoded = await getAdminAuth().verifyIdToken(token);
     return { uid: decoded.uid };
-  } catch (err) {
-    const message =
-      err instanceof Error
-        ? `Invalid or expired token: ${err.message}`
-        : "Invalid or expired token.";
-    return NextResponse.json({ error: message }, { status: 401 });
+  } catch {
+    // Don't leak Firebase error details to the client
+    return NextResponse.json({ error: "Invalid or expired token." }, { status: 401 });
   }
 }
 
@@ -67,6 +113,10 @@ export async function requireAuth(
   req: NextRequest,
   moduleId?: ModuleId
 ): Promise<AuthContext | NextResponse> {
+  // Step 0: CSRF protection
+  const csrfError = validateOrigin(req);
+  if (csrfError) return csrfError;
+
   const workspaceId = req.headers.get("x-workspace-id");
 
   // Step 1: Verify Firebase ID token — this gives us the trusted userId
@@ -151,8 +201,6 @@ export async function withAuth(
     return handler(auth);
   } catch (error) {
     console.error("withAuth error:", error);
-    const message =
-      error instanceof Error ? error.message : "Authentication failed";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: "Authentication failed" }, { status: 500 });
   }
 }

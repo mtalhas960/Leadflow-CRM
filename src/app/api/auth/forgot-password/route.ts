@@ -1,6 +1,7 @@
 import { getAdminDb, getAdminAuth } from "@/lib/firebase/admin";
 import { Timestamp } from "firebase-admin/firestore";
 import { NextRequest, NextResponse } from "next/server";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 const RESET_TOKENS_COLLECTION = "password_reset_tokens";
 
@@ -16,6 +17,12 @@ const RESET_TOKENS_COLLECTION = "password_reset_tokens";
  */
 export async function POST(req: NextRequest) {
   try {
+    // Rate limit: max 3 forgot-password requests per IP per hour, 3 per email per hour
+    const ip = getClientIp(req);
+    if (!checkRateLimit(`forgotpw:ip:${ip}`, 3, 3600_000)) {
+      return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
+    }
+
     const body = await req.json();
     const { email } = body;
 
@@ -24,6 +31,11 @@ export async function POST(req: NextRequest) {
     }
 
     const normalizedEmail = email.toLowerCase().trim();
+
+    if (!checkRateLimit(`forgotpw:email:${normalizedEmail}`, 3, 3600_000)) {
+      // Don't reveal rate limiting by email — return success to avoid email enumeration
+      return NextResponse.json({ success: true, sentBy: "resend" });
+    }
 
     // Find the user by email in Firebase Auth (Admin SDK)
     // so we can verify the account exists
@@ -128,7 +140,12 @@ export async function POST(req: NextRequest) {
 
     if (result.error) {
       console.error("Resend error:", result.error);
-      return NextResponse.json({ error: result.error.message }, { status: 500 });
+      // Don't expose Resend API error details — return generic success
+      // to avoid revealing whether the account exists (enumeration prevention)
+      return NextResponse.json({
+        success: true,
+        sentBy: "resend",
+      });
     }
 
     // Always return success even if user doesn't exist (security — don't reveal account existence)

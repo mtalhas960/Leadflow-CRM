@@ -61,8 +61,8 @@ export async function POST(req: NextRequest) {
             { status: 409 }
           );
         }
-      } catch {
-        // Non-critical — proceed without conflict check if query fails
+      } catch (err) {
+        console.error("Conflict detection query failed, proceeding without check:", err);
       }
 
       const meetingAttendees = Array.isArray(attendees) && attendees.length > 0
@@ -126,8 +126,8 @@ export async function POST(req: NextRequest) {
             description || null,
             duration
           );
-        } catch {
-          // Non-critical — don't fail the request
+        } catch (err) {
+          console.error("Failed to create calendar event for meeting:", err);
         }
       }
 
@@ -140,7 +140,7 @@ export async function POST(req: NextRequest) {
       });
     } catch (error) {
       console.error("Failed to schedule meeting:", error);
-      const message = error instanceof Error ? error.message : "Failed to schedule meeting";
+      const message = "Failed to schedule meeting";
       return NextResponse.json({ error: message }, { status: 500 });
     }
   });
