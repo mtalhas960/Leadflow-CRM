@@ -343,40 +343,44 @@ export async function markMessagesAsRead(
 }
 
 /**
- * Mark all messages in a conversation as read by the current user.
- * Also resets the conversation's unreadCount.
+ * Mark a conversation as read by the current user.
+ * Resets unreadCount to 0. Individual message readBy is handled on send.
  */
 export async function markConversationAsRead(
   conversationId: string,
-  userId: string
+  userId: string,
+  workspaceId?: string
 ): Promise<void> {
   if (!conversationId || !userId) return;
 
   try {
-    const q = query(
-      collection(db, MESSAGES_COLLECTION),
-      where("conversationId", "==", conversationId)
-    );
+    // Reset unread count on conversation
+    const convRef = doc(db, CONVERSATIONS_COLLECTION, conversationId);
+    await updateDoc(convRef, { unreadCount: 0 });
+
+    // Fetch messages, filtered by workspaceId so Firestore rules pass
+    // (isWorkspaceMember check reads resource.data.workspaceId — must match)
+    const constraints: QueryConstraint[] = [where("conversationId", "==", conversationId)];
+    if (workspaceId) constraints.push(where("workspaceId", "==", workspaceId));
+    const q = query(collection(db, MESSAGES_COLLECTION), ...constraints);
     const snapshot = await getDocs(q);
 
-    const batch = writeBatch(db);
+    let updated = 0;
     for (const docSnap of snapshot.docs) {
       const data = docSnap.data();
+      // Skip messages the current user sent
+      if (data.senderId === userId) continue;
       const readBy: string[] = data.readBy || [];
       if (!readBy.includes(userId)) {
-        batch.update(docSnap.ref, {
-          readBy: [...readBy, userId],
-        });
+        try {
+          await updateDoc(docSnap.ref, {
+            readBy: [...readBy, userId],
+          });
+          updated++;
+        } catch {
+          // Individual message update failed — continue with others
+        }
       }
-    }
-    await batch.commit();
-
-    // Reset unread count on conversation
-    try {
-      const convRef = doc(db, CONVERSATIONS_COLLECTION, conversationId);
-      await updateDoc(convRef, { unreadCount: 0 });
-    } catch {
-      // Non-critical
     }
   } catch {
     // Non-critical — read receipts are best-effort
