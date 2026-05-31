@@ -211,7 +211,7 @@ export interface CreateMeetResult {
 export async function createGoogleMeetEvent(
   userId: string,
   attendees: { email: string; name?: string }[],
-  options?: { title?: string; durationMinutes?: number; description?: string }
+  options?: { title?: string; startTime?: Date; durationMinutes?: number; description?: string }
 ): Promise<CreateMeetResult> {
   const authData = await getGoogleAuth(userId);
 
@@ -222,7 +222,7 @@ export async function createGoogleMeetEvent(
   const calendar = google.calendar({ version: "v3", auth: authData.client });
 
   const duration = options?.durationMinutes ?? 30;
-  const startTime = new Date();
+  const startTime = options?.startTime ?? new Date();
   const endTime = new Date(startTime.getTime() + duration * 60000);
 
   const names = attendees.map((a) => a.name || a.email).join(", ");

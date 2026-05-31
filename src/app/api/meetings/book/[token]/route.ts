@@ -164,6 +164,7 @@ export async function POST(
           if (ownerId) {
             meetResult = await createGoogleMeetEvent(ownerId, attendees, {
               title: `Meeting: ${meetingType.name}`,
+              startTime: startDate,
               durationMinutes: meetingType.duration,
               description: `Booked via scheduling page\n\nAttendee: ${attendeeName} (${attendeeEmail})${descriptionText ? `\n\n${descriptionText}` : ""}`,
             });
