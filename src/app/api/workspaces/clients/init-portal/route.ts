@@ -1,4 +1,4 @@
-import { adminDb } from "@/lib/firebase/server-admin";
+import { getAdminDb } from "@/lib/firebase/admin";
 import { Timestamp } from "firebase-admin/firestore";
 import { NextResponse } from "next/server";
 
@@ -21,14 +21,14 @@ export async function POST(request: Request) {
     }
 
     // Verify the user is owner/admin of this workspace
-    const workspaceRef = adminDb.collection("workspaces").doc(workspaceId);
+    const workspaceRef = getAdminDb().collection("workspaces").doc(workspaceId);
     const workspaceSnap = await workspaceRef.get();
     if (!workspaceSnap.exists) {
       return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
     }
 
     // Check if settings already exist
-    const settingsRef = adminDb.collection("client_portal_settings").doc(workspaceId);
+    const settingsRef = getAdminDb().collection("client_portal_settings").doc(workspaceId);
     const existing = await settingsRef.get();
     if (existing.exists) {
       return NextResponse.json({ message: "Settings already exist", exists: true });
