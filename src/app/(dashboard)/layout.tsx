@@ -9,6 +9,7 @@ import { WorkspaceSwitcher } from "@/components/workspace/workspace-switcher";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { UnreadBadge } from "@/components/messages/unread-badge";
 import { HeaderActionsProvider } from "@/contexts/header-actions-context";
+import { ClientPreviewProvider } from "@/lib/hooks/use-client-preview";
 import { WorkspaceProvider, useWorkspace } from "@/contexts/workspace-context";
 import { auth, db } from "@/lib/firebase/client";
 import { usePermissions } from "@/lib/hooks/use-permissions";
@@ -445,8 +446,10 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <WorkspaceProvider>
-      <DashboardLayoutInner>{children}</DashboardLayoutInner>
-    </WorkspaceProvider>
+    <ClientPreviewProvider>
+      <WorkspaceProvider>
+        <DashboardLayoutInner>{children}</DashboardLayoutInner>
+      </WorkspaceProvider>
+    </ClientPreviewProvider>
   );
 }
