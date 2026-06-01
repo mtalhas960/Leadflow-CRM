@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { ClientPreviewBanner } from "@/components/client/ClientPreviewBanner";
 import { ClientUserProvider } from "@/contexts/client-user-context";
-import type { ClientUserData } from "@/contexts/client-user-context";
 import { auth, db } from "@/lib/firebase/client";
+import { useClientPreview } from "@/lib/hooks/use-client-preview";
 import { cn } from "@/lib/utils";
 import type { ClientPortalSettings } from "@/types";
 import { DEFAULT_CLIENT_PORTAL_SETTINGS } from "@/types";
@@ -33,7 +34,6 @@ import {
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 
 interface ClientUser {
@@ -103,6 +103,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
+  const { isPreviewing, previewClientName, previewClientId } = useClientPreview();
   const isAuthRoute = pathname?.startsWith("/client/auth") ?? false;
 
   // Compute visible nav items based on portal settings
@@ -116,6 +117,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const saved = localStorage.getItem("leadflow_client_sidebar_collapsed");
     if (saved !== null) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSidebarCollapsed(saved === "true");
     }
   }, []);
@@ -127,6 +129,22 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
   // Auth + user data loading
   useEffect(() => {
     if (isAuthRoute) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLoading(false);
+      return;
+    }
+
+    // Preview mode: use mock data
+    if (isPreviewing && previewClientId) {
+      setClientUser({
+        uid: previewClientId,
+        displayName: previewClientName || "Preview Client",
+        email: "client@preview.local",
+        photoURL: null,
+        clientWorkspaceId: "preview",
+        workspaceName: "Workspace (Preview)",
+      });
+      setPortalSettings(DEFAULT_CLIENT_PORTAL_SETTINGS as ClientPortalSettings);
       setLoading(false);
       return;
     }
@@ -191,7 +209,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
     });
 
     return () => unsubscribe();
-  }, [router, isAuthRoute]);
+  }, [router, isAuthRoute, isPreviewing, previewClientId, previewClientName]);
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -451,6 +469,9 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
 
         {/* Main content */}
         <main className="flex flex-1 flex-col overflow-hidden">
+          {/* Preview banner (agency preview mode) */}
+          <ClientPreviewBanner />
+
           {/* Header */}
           <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-sm lg:px-6">
             <div className="flex items-center gap-2">
