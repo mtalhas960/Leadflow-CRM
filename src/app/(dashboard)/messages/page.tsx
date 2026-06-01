@@ -747,10 +747,11 @@ export default function MessagesPage() {
     ];
   }, [filteredConversations, roleMap, user?.id]);
 
-  // Members without an existing conversation (exclude current user)
+  // Members without an existing conversation (exclude current user + exclude clients — they have their own section)
   const membersWithoutConvo = workspaceMembers.filter(
     (m) =>
       m.userId !== user?.id &&
+      m.role !== "client" &&
       !myConversations.some(
         (c) =>
           c.type === "member" &&
