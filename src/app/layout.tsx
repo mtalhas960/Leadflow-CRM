@@ -22,10 +22,10 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "LeadFlow - Open-Source CRM & Time Tracker",
+  title: "LeadFlow - Open-Source CRM | Pipeline, Projects, Invoices & More",
   description:
-    "A modern, lightweight CRM for freelancers, small teams, and agencies. Manage leads, track outreach, and analyze performance.",
-  keywords: ["CRM", "time tracker", "lead management", "open source", "sales pipeline"],
+    "The open-source CRM your team will actually use. Pipeline management, projects, invoices, time tracking, messaging, client portal — all in one platform. Self-host or try instantly.",
+  keywords: ["CRM", "open source CRM", "lead management", "sales pipeline", "project management", "invoicing", "time tracking", "client portal"],
   authors: [{ name: "LeadFlow Contributors" }],
   applicationName: "LeadFlow",
   icons: {
