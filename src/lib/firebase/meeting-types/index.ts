@@ -15,6 +15,11 @@ import {
 import { db } from "@/lib/firebase/client";
 import type { Timestamp } from "firebase/firestore";
 
+function isDemoMode(): boolean {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem("leadflow_demo_mode") === "true";
+}
+
 /* ─── Types ─────────────────────────────────────────────────────── */
 
 export interface MeetingType {
@@ -96,7 +101,44 @@ export async function createMeetingType(
 
 /* ─── Get Single ─────────────────────────────────────────────────── */
 
+const DEMO_MEETING_TYPES = [
+  {
+    id: "demo-mt-1",
+    workspaceId: "demo-workspace",
+    name: "30 Minute Call",
+    duration: 30,
+    bufferTime: 5,
+    videoTool: "google_meet" as const,
+    description: "Quick check-in call",
+    active: true,
+    bookingToken: "demo-token-1",
+    slug: "30-minute-call",
+    createdBy: "demo-user",
+    createdAt: null,
+    updatedAt: null,
+  },
+  {
+    id: "demo-mt-2",
+    workspaceId: "demo-workspace",
+    name: "60 Minute Consultation",
+    duration: 60,
+    bufferTime: 10,
+    videoTool: "google_meet" as const,
+    description: "Full consultation session",
+    active: true,
+    bookingToken: "demo-token-2",
+    slug: "60-minute-consultation",
+    createdBy: "demo-user",
+    createdAt: null,
+    updatedAt: null,
+  },
+];
+
 export async function getMeetingType(id: string): Promise<MeetingType | null> {
+  if (isDemoMode()) {
+    const found = DEMO_MEETING_TYPES.find((mt) => mt.id === id);
+    return (found ?? null) as unknown as MeetingType | null;
+  }
   const snap = await getDoc(doc(db, COLLECTION, id));
   if (!snap.exists()) return null;
   return { id: snap.id, ...snap.data() } as MeetingType;
@@ -120,6 +162,9 @@ export async function getMeetingTypeByToken(token: string): Promise<MeetingType 
 /* ─── List for Workspace ─────────────────────────────────────────── */
 
 export async function getMeetingTypes(workspaceId: string): Promise<MeetingType[]> {
+  if (isDemoMode()) {
+    return DEMO_MEETING_TYPES as unknown as MeetingType[];
+  }
   const q = query(
     collection(db, COLLECTION),
     where("workspaceId", "==", workspaceId),
