@@ -60,7 +60,6 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { href: "/client/meetings", label: "Meetings", icon: Calendar, moduleKey: "meetings" },
   { href: "/client/invoices", label: "Invoices", icon: FileText, moduleKey: "invoices" },
   { href: "/client/documents", label: "Documents", icon: File, moduleKey: "documents" },
-  { href: "/client/time-tracker", label: "Time Tracker", icon: Clock, moduleKey: "time_tracking" },
   { href: "/client/settings", label: "Settings", icon: Settings },
 ];
 
