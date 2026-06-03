@@ -10,11 +10,12 @@ export async function GET(req: NextRequest) {
     try {
       const { searchParams } = new URL(req.url);
       const leadId = searchParams.get("leadId");
+      const projectId = searchParams.get("projectId");
       const workspaceId = searchParams.get("workspaceId");
 
-      if (!leadId && !workspaceId) {
+      if (!leadId && !projectId && !workspaceId) {
         return NextResponse.json(
-          { error: "leadId or workspaceId is required" },
+          { error: "leadId, projectId, or workspaceId is required" },
           { status: 400 }
         );
       }
@@ -28,6 +29,8 @@ export async function GET(req: NextRequest) {
       let query;
       if (leadId) {
         query = db.collection(DOCUMENTS_COLLECTION).where("leadId", "==", leadId);
+      } else if (projectId) {
+        query = db.collection(DOCUMENTS_COLLECTION).where("projectId", "==", projectId);
       } else {
         query = db.collection(DOCUMENTS_COLLECTION).where("workspaceId", "==", workspaceId);
       }

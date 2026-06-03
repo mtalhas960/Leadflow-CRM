@@ -26,7 +26,8 @@ function isDemoMode(): boolean {
 export async function uploadDocument(
   workspaceId: string,
   file: File,
-  leadId?: string
+  leadId?: string,
+  projectId?: string
 ): Promise<{ documentId: string; url: string } | null> {
   if (isDemoMode()) {
     const { demoStore } = await import("@/lib/demo/demo-data");
@@ -37,6 +38,7 @@ export async function uploadDocument(
     const formData = new FormData();
     formData.append("file", file);
     if (leadId) formData.append("leadId", leadId);
+    if (projectId) formData.append("projectId", projectId);
 
     const idToken = await getIdToken();
     const response = await fetch("/api/documents/upload", {
@@ -71,6 +73,30 @@ export async function getDocument(id: string): Promise<Document | null> {
   const snap = await getDoc(doc(db, COLLECTION, id));
   if (!snap.exists()) return null;
   return { id: snap.id, ...snap.data() } as Document;
+}
+
+// ── Read (by project) ─────────────────────────────────────────────────────────
+
+export async function getProjectDocuments(
+  projectId: string,
+  workspaceId: string
+): Promise<Document[]> {
+  if (isDemoMode()) {
+    const { demoStore } = await import("@/lib/demo/demo-data");
+    return demoStore.getDocuments().filter(
+      (d) => d.workspaceId === workspaceId && (d as any).projectId === projectId
+    );
+  }
+
+  const q = query(
+    collection(db, COLLECTION),
+    where("projectId", "==", projectId),
+    where("workspaceId", "==", workspaceId),
+    orderBy("createdAt", "desc")
+  );
+
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Document);
 }
 
 // ── Read (list) ──────────────────────────────────────────────────────────────

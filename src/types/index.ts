@@ -266,6 +266,7 @@ export interface Document {
   id: string;
   workspaceId: string;
   leadId: string;
+  projectId?: string;
   fileName: string;
   fileType: string;
   mimeType: string;

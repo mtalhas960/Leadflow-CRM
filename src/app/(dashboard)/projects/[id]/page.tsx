@@ -70,6 +70,7 @@ import NotesCard from "@/components/projects/project-detail/sidebar-cards/notes-
 import ContractsCard from "@/components/projects/project-detail/sidebar-cards/contracts-card";
 import InvoicesCard from "@/components/projects/project-detail/sidebar-cards/invoices-card";
 import ProfitabilityCard from "@/components/projects/project-detail/sidebar-cards/profitability-card";
+import ProjectFiles from "@/components/projects/project-detail/project-files";
 import {
   ArrowLeft,
   Calendar,
@@ -545,13 +546,9 @@ export default function ProjectDetailPage() {
           </div>
         )}
 
-        {/* ─── FILES (placeholder) ─── */}
+        {/* ─── FILES ─── */}
         {activeTab === "files" && (
-          <div className="text-center py-16 border rounded-lg border-dashed">
-            <FolderKanban className="h-12 w-12 mx-auto text-muted-foreground/30 mb-4" />
-            <h3 className="text-lg font-semibold text-foreground">Project Files</h3>
-            <p className="text-sm text-muted-foreground mt-1">File management coming soon.</p>
-          </div>
+          <ProjectFiles projectId={projectId} workspaceId={project.workspaceId} userId={firebaseUser?.uid || "demo"} />
         )}
 
         {/* ─── TIME (placeholder) ─── */}
