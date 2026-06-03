@@ -47,6 +47,22 @@ function getStatusStyle(color: string) {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+function parseDueDate(dueDate: unknown): Date | null {
+  if (!dueDate) return null;
+  // Firestore Timestamp with toDate()
+  if (typeof (dueDate as any).toDate === "function") return (dueDate as any).toDate();
+  // Plain object { seconds, nanoseconds } from optimistic update
+  if (typeof dueDate === "object" && "seconds" in (dueDate as any)) return new Date((dueDate as any).seconds * 1000);
+  // ISO string or other string
+  if (typeof dueDate === "string") {
+    const d = new Date(dueDate);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  // Date object
+  if (dueDate instanceof Date) return dueDate;
+  return null;
+}
+
 function formatDate(date: Date | null): string {
   if (!date) return "";
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -162,9 +178,7 @@ export function TaskCard({
 
   const assignee = task.assigneeId ? memberMap?.get(task.assigneeId) : null;
   const hasSubtasks = task.hasSubtasks && !isSubtask;
-  const dueDateValue = task.dueDate && typeof (task.dueDate as any).toDate === "function"
-    ? (task.dueDate as any).toDate()
-    : task.dueDate ? new Date(task.dueDate as unknown as string) : null;
+  const dueDateValue = parseDueDate(task.dueDate);
 
   const handleDragStart = (e: React.DragEvent) => { onDragStart?.(e, task); };
   const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); onDragOver?.(e); };
@@ -289,8 +303,8 @@ export function TaskCard({
                 </div>
               </div>
 
-              {/* SECOND ROW: metadata */}
-              {!isSubtask && (
+              {/* SECOND ROW: metadata - only for non-subtasks */}
+              {!task.parentTaskId && (
                 <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1 ml-9">
                   {/* Assignee picker */}
                   <div className="relative">

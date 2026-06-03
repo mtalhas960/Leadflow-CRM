@@ -368,7 +368,8 @@ export default function ProjectDetailPage() {
   const handleTaskDueDateChange = async (task: ProjectTask, dueDate: Date | null) => {
     try {
       await updateTask(task.id, { dueDate } as any);
-      setTasks((prev) => prev.map((t) => t.id === task.id ? { ...t, dueDate: dueDate ? { seconds: Math.floor(dueDate.getTime() / 1000), nanoseconds: 0 } as any : null } as ProjectTask : t));
+      // Store as ISO string for optimistic update (safely parseable)
+      setTasks((prev) => prev.map((t) => t.id === task.id ? { ...t, dueDate: dueDate ? dueDate.toISOString() as any : null } as ProjectTask : t));
     } catch { toast.error("Failed to update due date"); }
   };
 
@@ -464,7 +465,7 @@ export default function ProjectDetailPage() {
   const handleMilestoneDueDateChange = async (milestone: ProjectMilestone, dueDate: Date | null) => {
     try {
       await updateMilestone(milestone.id, { dueDate } as any);
-      setMilestones((prev) => prev.map((m) => m.id === milestone.id ? { ...m, dueDate: dueDate ? { seconds: Math.floor(dueDate.getTime() / 1000), nanoseconds: 0 } as any : null } : m));
+      setMilestones((prev) => prev.map((m) => m.id === milestone.id ? { ...m, dueDate: dueDate ? dueDate.toISOString() as any : null } : m));
     } catch { toast.error("Failed to update milestone due date"); }
   };
 

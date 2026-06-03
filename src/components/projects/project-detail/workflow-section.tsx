@@ -37,6 +37,17 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function parseMsDate(dueDate: unknown): Date | null {
+  if (!dueDate) return null;
+  if (typeof (dueDate as any).toDate === "function") return (dueDate as any).toDate();
+  if (typeof dueDate === "object" && "seconds" in (dueDate as any)) return new Date((dueDate as any).seconds * 1000);
+  if (typeof dueDate === "string") { const d = new Date(dueDate); return isNaN(d.getTime()) ? null : d; }
+  if (dueDate instanceof Date) return dueDate;
+  return null;
+}
+
 // ─── Section Action Button ────────────────────────────────────────────────────
 
 function SectionActionButton({
@@ -489,7 +500,7 @@ export default function WorkflowSection({
                             >
                               <Calendar className="h-3 w-3" />
                               {ms.dueDate ? (
-                                <span>{ms.dueDate.toDate().toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                                <span>{(() => { const d = parseMsDate(ms.dueDate); return d ? d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "Invalid"; })()}</span>
                               ) : (
                                 <span className="hover:text-foreground">Set date</span>
                               )}
@@ -501,7 +512,7 @@ export default function WorkflowSection({
                                   <input
                                     type="date"
                                     className="w-full px-2 py-1.5 text-xs border border-border rounded bg-background text-foreground"
-                                    value={ms.dueDate ? ms.dueDate.toDate().toISOString().split("T")[0] : ""}
+                                    value={ms.dueDate ? (() => { const d = parseMsDate(ms.dueDate); return d ? d.toISOString().split("T")[0] : ""; })() : ""}
                                     onChange={(e) => {
                                       const val = e.target.value;
                                       if (val) onMilestoneDueDateChange?.(ms, new Date(val + "T00:00:00"));
