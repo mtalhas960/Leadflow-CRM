@@ -599,7 +599,7 @@ export default function ProjectDetailPage() {
 
   if (loading) {
     return (
-      <div className="max-w-6xl mx-auto space-y-6">
+      <div className="mx-auto space-y-6">
         <Skeleton className="h-5 w-32" />
         <Skeleton className="h-8 w-64" />
         <Card><CardContent className="p-6 space-y-4">
@@ -622,7 +622,7 @@ export default function ProjectDetailPage() {
 
   return (
     <RequireModuleAccess moduleId="projects">
-      <div className="max-w-6xl mx-auto space-y-6">
+      <div className="mx-auto space-y-6">
         {/* ─── Header ─── */}
         <ProjectHeader project={project} onEdit={startEditing} onDelete={() => setShowDeleteDialog(true)} />
 

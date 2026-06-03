@@ -56,7 +56,7 @@ function SectionActionButton({
   return (
     <div className="relative flex items-center">
       <button onClick={onPrimary}
-        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-l-md hover:bg-primary/90 transition-colors border-r border-primary-foreground/20"
+        className="inline-flex items-center gap-2 px-4 py-1.5 text-sm font-medium bg-primary text-primary-foreground rounded-l-md hover:bg-primary/90 transition-colors border-r border-primary-foreground/20"
       >
         <Plus className="h-4 w-4" /> {primaryLabel}
       </button>
