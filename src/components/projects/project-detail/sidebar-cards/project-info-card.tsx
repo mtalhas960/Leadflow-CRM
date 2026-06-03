@@ -1,15 +1,28 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
-import { Calendar, DollarSign, User } from "lucide-react";
-import type { Project, WorkspaceMember } from "@/types";
+import { useState } from "react";
+import { Calendar, DollarSign, User, ChevronDown } from "lucide-react";
+import type { Project, ProjectStatus, WorkspaceMember } from "@/types";
+import { updateProject } from "@/lib/firebase/projects";
+import { toast } from "@/lib/toast";
+
+const STATUS_CONFIG: Record<string, { label: string; class: string }> = {
+  active: { label: "Active", class: "bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400" },
+  on_hold: { label: "On Hold", class: "bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400" },
+  completed: { label: "Completed", class: "bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400" },
+  cancelled: { label: "Cancelled", class: "bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400" },
+};
 
 interface ProjectInfoCardProps {
   project: Project;
   memberMap: Map<string, { displayName: string; photoURL?: string | null }>;
+  onProjectUpdated?: () => void;
 }
 
-export default function ProjectInfoCard({ project, memberMap }: ProjectInfoCardProps) {
+export default function ProjectInfoCard({ project, memberMap, onProjectUpdated }: ProjectInfoCardProps) {
+  const [showStatusMenu, setShowStatusMenu] = useState(false);
+  const [saving, setSaving] = useState(false);
+
   const clientNames = project.clients
     .map((cid) => memberMap.get(cid)?.displayName)
     .filter(Boolean)
@@ -19,6 +32,21 @@ export default function ProjectInfoCard({ project, memberMap }: ProjectInfoCardP
     ? Math.ceil((project.dueDate.toDate().getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : null;
 
+  const handleStatusChange = async (newStatus: ProjectStatus) => {
+    if (newStatus === project.status) return;
+    setSaving(true);
+    try {
+      await updateProject(project.id, { status: newStatus } as any);
+      toast.success(`Status changed to ${STATUS_CONFIG[newStatus]?.label || newStatus}`);
+      onProjectUpdated?.();
+    } catch {
+      toast.error("Failed to update status");
+    } finally {
+      setSaving(false);
+      setShowStatusMenu(false);
+    }
+  };
+
   return (
     <div
       style={{ borderRadius: "8px" }}
@@ -27,16 +55,44 @@ export default function ProjectInfoCard({ project, memberMap }: ProjectInfoCardP
       <h3 className="text-sm font-semibold text-foreground mb-4">Project Info</h3>
 
       <div className="grid grid-cols-2 gap-4">
-        {/* Status */}
-        <div>
+        {/* Status with dropdown */}
+        <div className="relative">
           <p className="text-xs text-muted-foreground">Status</p>
-          <p className="text-sm font-medium text-foreground capitalize">{project.status.replace("_", " ")}</p>
-        </div>
-
-        {/* Priority */}
-        <div>
-          <p className="text-xs text-muted-foreground">Priority</p>
-          <p className="text-sm font-medium text-foreground capitalize">{project.priority || "none"}</p>
+          <button
+            onClick={() => setShowStatusMenu(!showStatusMenu)}
+            className="flex items-center gap-1.5 text-sm font-medium text-foreground capitalize hover:text-primary transition-colors mt-0.5"
+          >
+            <span className={`inline-block w-2 h-2 rounded-full ${
+              project.status === "active" ? "bg-green-500" :
+              project.status === "on_hold" ? "bg-amber-500" :
+              project.status === "completed" ? "bg-blue-500" :
+              "bg-red-500"
+            }`} />
+            {project.status.replace("_", " ")}
+            <ChevronDown className="h-3 w-3 text-muted-foreground" />
+          </button>
+          {showStatusMenu && (
+            <div className="absolute left-0 top-full mt-1 bg-popover border border-border rounded-md shadow-lg z-50 py-1 min-w-[140px]">
+              {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
+                <button
+                  key={key}
+                  onClick={() => handleStatusChange(key as ProjectStatus)}
+                  disabled={saving}
+                  className={`w-full px-3 py-1.5 text-left text-xs flex items-center gap-2 hover:bg-accent ${
+                    key === project.status ? "font-medium text-foreground" : "text-muted-foreground"
+                  }`}
+                >
+                  <span className={`w-2 h-2 rounded-full ${
+                    key === "active" ? "bg-green-500" :
+                    key === "on_hold" ? "bg-amber-500" :
+                    key === "completed" ? "bg-blue-500" :
+                    "bg-red-500"
+                  }`} />
+                  {cfg.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Client */}

@@ -11,6 +11,7 @@ interface WorkflowSectionProps {
   milestones: ProjectMilestone[];
   memberMap: Map<string, { displayName: string; photoURL?: string | null }>;
   onToggleTaskComplete: (task: ProjectTask) => void;
+  onTaskStatusChange: (task: ProjectTask, newStatus: { parent: string; name: string; color: string }) => void;
   onDeleteTask: (task: ProjectTask) => void;
   onAddTask: () => void;
   getSubtasks: (parentId: string) => ProjectTask[];
@@ -23,6 +24,7 @@ export default function WorkflowSection({
   milestones,
   memberMap,
   onToggleTaskComplete,
+  onTaskStatusChange,
   onDeleteTask,
   onAddTask,
   getSubtasks,
@@ -85,6 +87,7 @@ export default function WorkflowSection({
                   task={task}
                   memberMap={memberMap}
                   onToggleComplete={onToggleTaskComplete}
+                  onStatusChange={onTaskStatusChange}
                   onDelete={onDeleteTask}
                   showSubtasks={isExpanded}
                   onToggleSubtasks={onToggleSubtaskExpand}
@@ -97,6 +100,7 @@ export default function WorkflowSection({
                         task={sub}
                         memberMap={memberMap}
                         onToggleComplete={onToggleTaskComplete}
+                        onStatusChange={onTaskStatusChange}
                         onDelete={onDeleteTask}
                         isSubtask
                       />

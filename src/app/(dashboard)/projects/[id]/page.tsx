@@ -90,7 +90,6 @@ import {
   Plus,
   Trash2,
   Users,
-  Clock,
 } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/lib/hooks/use-auth";
@@ -129,7 +128,6 @@ function formatDate(date: Date | null): string {
 const TABS = [
   { id: "overview", label: "Overview" },
   { id: "tasks", label: "Tasks" },
-  { id: "milestones", label: "Milestones" },
   { id: "notes", label: "Notes" },
   { id: "files", label: "Files" },
   { id: "time", label: "Time" },
@@ -225,19 +223,20 @@ export default function ProjectDetailPage() {
         .catch((err) => { console.error("Failed to load tasks:", err); toast.error("Failed to load tasks"); })
         .finally(() => setTasksLoading(false));
     }
-    if (activeTab === "milestones" || activeTab === "overview") {
-      setMilestonesLoading(true);
-      getProjectMilestones(projectId)
-        .then(setMilestones)
-        .catch((err) => { console.error("Failed to load milestones:", err); toast.error("Failed to load milestones"); })
-        .finally(() => setMilestonesLoading(false));
-    }
     if (activeTab === "notes" || activeTab === "overview") {
       setNotesLoading(true);
       getProjectNotes(projectId)
         .then(setNotes)
         .catch((err) => { console.error("Failed to load notes:", err); toast.error("Failed to load notes"); })
         .finally(() => setNotesLoading(false));
+    }
+    // Load milestones for both overview and tasks (they show together now)
+    if (activeTab === "overview" || activeTab === "tasks") {
+      setMilestonesLoading(true);
+      getProjectMilestones(projectId)
+        .then(setMilestones)
+        .catch((err) => { console.error("Failed to load milestones:", err); toast.error("Failed to load milestones"); })
+        .finally(() => setMilestonesLoading(false));
     }
   }, [projectId, activeTab]);
 
@@ -284,6 +283,8 @@ export default function ProjectDetailPage() {
 
   // ─── Task Handlers ───────────────────────────────────────────────────────────
 
+  const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
+
   const handleCreateTask = async (data: TaskFormData) => {
     if (!projectId || !project) return;
     setTaskSaving(true);
@@ -310,16 +311,24 @@ export default function ProjectDetailPage() {
     try {
       await updateTask(task.id, {
         status: isComplete
-          ? { parent: "To Do", name: "Not Started", color: "#F5EFCF" }
-          : { parent: "Complete", name: "Complete", color: "#E8F5E9" },
+          ? { parent: "To Do", name: "Not Started", color: "#DDDDDD" }
+          : { parent: "Complete", name: "Complete", color: "#D1F5CF" },
       } as any);
       setTasks((prev) => prev.map((t) => t.id === task.id ? {
         ...t,
-        status: isComplete ? { parent: "To Do", name: "Not Started", color: "#F5EFCF" } : { parent: "Complete", name: "Complete", color: "#E8F5E9" },
+        status: isComplete ? { parent: "To Do", name: "Not Started", color: "#DDDDDD" } : { parent: "Complete", name: "Complete", color: "#D1F5CF" },
         completedAt: isComplete ? null : ({ seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 } as any),
       } : t));
       toast.success(isComplete ? "Task reopened" : "Task completed");
     } catch { toast.error("Failed to update task"); }
+  };
+
+  const handleTaskStatusChange = async (task: ProjectTask, newStatus: { parent: string; name: string; color: string }) => {
+    try {
+      await updateTask(task.id, { status: newStatus } as any);
+      setTasks((prev) => prev.map((t) => t.id === task.id ? { ...t, status: newStatus } as ProjectTask : t));
+      toast.success(`Task status: ${newStatus.name}`);
+    } catch { toast.error("Failed to update task status"); }
   };
 
   const handleDeleteTask = async (task: ProjectTask) => {
@@ -332,6 +341,32 @@ export default function ProjectDetailPage() {
 
   const toggleSubtaskExpand = (task: ProjectTask) => {
     setExpandedTasks((prev) => { const next = new Set(prev); if (next.has(task.id)) next.delete(task.id); else next.add(task.id); return next; });
+  };
+
+  // ─── Task Drag Reorder ───────────────────────────────────────────────────────
+
+  const handleTaskDragStart = (e: React.DragEvent, task: ProjectTask) => {
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", task.id);
+  };
+
+  const handleTaskDrop = async (e: React.DragEvent, targetTask: ProjectTask) => {
+    e.preventDefault();
+    const draggedId = e.dataTransfer.getData("text/plain");
+    if (!draggedId || draggedId === targetTask.id) return;
+    const allTasks = [...tasks];
+    const fromIdx = allTasks.findIndex((t) => t.id === draggedId);
+    const toIdx = allTasks.findIndex((t) => t.id === targetTask.id);
+    if (fromIdx < 0 || toIdx < 0) return;
+    const [moved] = allTasks.splice(fromIdx, 1);
+    allTasks.splice(toIdx, 0, moved);
+    // Update order in state
+    const reordered = allTasks.map((t, i) => ({ ...t, order: i }));
+    setTasks(reordered);
+    // Persist order to Firestore
+    try {
+      await Promise.all(reordered.map((t) => updateTask(t.id, { order: t.order } as any)));
+    } catch { toast.error("Failed to save task order"); }
   };
 
   // ─── Milestone Handlers ──────────────────────────────────────────────────────
@@ -454,6 +489,7 @@ export default function ProjectDetailPage() {
                   milestones={milestones}
                   memberMap={memberMap}
                   onToggleTaskComplete={handleToggleTaskComplete}
+                  onTaskStatusChange={handleTaskStatusChange}
                   onDeleteTask={handleDeleteTask}
                   onAddTask={() => setShowCreateTask(true)}
                   getSubtasks={getSubtasks}
@@ -462,10 +498,10 @@ export default function ProjectDetailPage() {
                 />
               </div>
 
-              {/* Right: Sidebar cards */}
-              <div className="w-full lg:w-[35%] space-y-4">
-                <ProjectInfoCard project={project} memberMap={memberMap} />
-                <TeamCard members={members} memberIds={project.memberIds} />
+              {/* Right: Sidebar cards - sticky & scrollable */}
+              <div className="w-full lg:w-[35%] space-y-4 lg:sticky lg:top-4 lg:self-start max-h-[calc(100vh-180px)] overflow-y-auto custom-scrollbar">
+                <ProjectInfoCard project={project} memberMap={memberMap} onProjectUpdated={loadProject} />
+                <TeamCard projectId={projectId} members={members} memberIds={project.memberIds} onProjectUpdated={loadProject} />
                 <LinksCard project={project} onProjectUpdated={loadProject} />
                 <DeliveryFlowCard project={project} onProjectUpdated={loadProject} />
                 <NotesCard notes={notes} onCreateNote={handleCreateNote} onDeleteNote={handleDeleteNote} />
@@ -482,63 +518,67 @@ export default function ProjectDetailPage() {
           </div>
         )}
 
-        {/* ─── TASKS ─── */}
+        {/* ─── TASKS (includes milestones) ─── */}
         {activeTab === "tasks" && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <ListTodo className="h-4 w-4" />
-                <span>{tasks.length} task{tasks.length !== 1 ? "s" : ""}</span>
-                <span className="text-muted-foreground/40">|</span>
-                <span>{tasksCompleted} complete</span>
-              </div>
-              <Button variant="default" size="sm" className="gap-1.5" onClick={() => setShowCreateTask(true)}>
-                <Plus className="h-4 w-4" /> Add Task
-              </Button>
-            </div>
-
-            {tasksLoading ? (
-              <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => (<Skeleton key={i} className="h-16 w-full rounded-lg" />))}</div>
-            ) : topLevelTasks.length === 0 ? (
-              <div className="text-center py-12 border rounded-lg border-dashed">
-                <ListTodo className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
-                <p className="text-sm text-muted-foreground mb-1">No tasks yet</p>
-                <p className="text-xs text-muted-foreground/60 mb-4">Break your project into manageable tasks.</p>
-                <Button variant="outline" size="sm" onClick={() => setShowCreateTask(true)}>
-                  <Plus className="h-4 w-4 mr-1" /> Create your first task
+          <div className="space-y-6">
+            {/* Tasks section */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <ListTodo className="h-4 w-4" />
+                  <span>{tasks.length} task{tasks.length !== 1 ? "s" : ""}</span>
+                  <span className="text-muted-foreground/40">|</span>
+                  <span>{tasksCompleted} complete</span>
+                </div>
+                <Button variant="default" size="sm" className="gap-1.5" onClick={() => setShowCreateTask(true)}>
+                  <Plus className="h-4 w-4" /> Add Task
                 </Button>
               </div>
-            ) : (
-              <div className="space-y-2">
-                {topLevelTasks.map((task) => {
-                  const subtasks = getSubtasks(task.id);
-                  const isExpanded = expandedTasks.has(task.id);
-                  return (
-                    <div key={task.id}>
-                      <TaskCard task={task} memberMap={memberMap} onToggleComplete={handleToggleTaskComplete} onDelete={handleDeleteTask} showSubtasks={isExpanded} onToggleSubtasks={toggleSubtaskExpand} />
-                      {isExpanded && subtasks.length > 0 && (
-                        <div className="mt-1 space-y-1 pl-4 border-l-2 border-muted ml-6">
-                          {subtasks.map((sub) => (<TaskCard key={sub.id} task={sub} memberMap={memberMap} onToggleComplete={handleToggleTaskComplete} onDelete={handleDeleteTask} isSubtask />))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+
+              {tasksLoading ? (
+                <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => (<Skeleton key={i} className="h-16 w-full rounded-lg" />))}</div>
+              ) : topLevelTasks.length === 0 ? (
+                <div className="text-center py-8 border rounded-lg border-dashed">
+                  <ListTodo className="h-8 w-8 mx-auto text-muted-foreground/30 mb-2" />
+                  <p className="text-sm text-muted-foreground mb-1">No tasks yet</p>
+                  <Button variant="outline" size="sm" onClick={() => setShowCreateTask(true)}>
+                    <Plus className="h-4 w-4 mr-1" /> Create your first task
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  {topLevelTasks.map((task) => {
+                    const subtasks = getSubtasks(task.id);
+                    const isExpanded = expandedTasks.has(task.id);
+                    return (
+                      <div key={task.id}>
+                        <TaskCard task={task} memberMap={memberMap} onToggleComplete={handleToggleTaskComplete} onStatusChange={handleTaskStatusChange} onDelete={handleDeleteTask} showSubtasks={isExpanded} onToggleSubtasks={toggleSubtaskExpand} onDragStart={handleTaskDragStart} onDrop={handleTaskDrop} />
+                        {isExpanded && subtasks.length > 0 && (
+                          <div className="mt-1 space-y-1 pl-4 border-l-2 border-muted ml-6">
+                            {subtasks.map((sub) => (<TaskCard key={sub.id} task={sub} memberMap={memberMap} onToggleComplete={handleToggleTaskComplete} onStatusChange={handleTaskStatusChange} onDelete={handleDeleteTask} isSubtask />))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Milestones section */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <Flag className="h-4 w-4 text-muted-foreground" />
+                Milestones ({milestones.length})
+              </h3>
+              {milestonesLoading ? (
+                <div className="space-y-2">{Array.from({ length: 2 }).map((_, i) => (<Skeleton key={i} className="h-20 w-full rounded-lg" />))}</div>
+              ) : (
+                <MilestoneList milestones={milestones} onCreate={handleCreateMilestone} onDelete={handleDeleteMilestone} saving={milestoneSaving} />
+              )}
+            </div>
 
             <TaskCreateDialog open={showCreateTask} onOpenChange={setShowCreateTask} onSubmit={handleCreateTask} members={members} saving={taskSaving} />
-          </div>
-        )}
-
-        {/* ─── MILESTONES ─── */}
-        {activeTab === "milestones" && (
-          <div>
-            {milestonesLoading ? (
-              <div className="space-y-2">{Array.from({ length: 2 }).map((_, i) => (<Skeleton key={i} className="h-20 w-full rounded-lg" />))}</div>
-            ) : (
-              <MilestoneList milestones={milestones} onCreate={handleCreateMilestone} onDelete={handleDeleteMilestone} saving={milestoneSaving} />
-            )}
           </div>
         )}
 
