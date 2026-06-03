@@ -4,7 +4,6 @@ import { useWorkspace } from "@/contexts/workspace-context";
 import { getProjects } from "@/lib/firebase/projects";
 import { getWorkspaceMembers } from "@/lib/firebase/workspaces";
 import type { Project, WorkspaceMember } from "@/types";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,10 +17,12 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RequireModuleAccess } from "@/components/shared/require-module-access";
+import ProjectKanbanBoard from "@/components/projects/shared/project-kanban-board";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Calendar,
   FolderKanban,
-  Loader2,
+  LayoutGrid,
   Plus,
   Search,
   Users,
@@ -44,6 +45,8 @@ const PRIORITY_ORDER: Record<string, number> = {
   medium: 2,
   low: 3,
 };
+
+const VIEW_MODE_KEY = "leadflow_projects_view_mode";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -71,6 +74,12 @@ export default function ProjectsPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<"grid" | "board">(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem(VIEW_MODE_KEY) as "grid" | "board") || "grid";
+    }
+    return "grid";
+  });
 
   const loadProjects = useCallback(async () => {
     if (!activeWorkspace?.id) return;
@@ -140,7 +149,7 @@ export default function ProjectsPage() {
           </Button>
         </div>
 
-        {/* Filters */}
+        {/* Filters + View Toggle */}
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -164,29 +173,64 @@ export default function ProjectsPage() {
               ))}
             </SelectContent>
           </Select>
+          {/* View toggle */}
+          <Tabs
+            value={viewMode}
+            onValueChange={(v) => {
+              const mode = v as "grid" | "board";
+              setViewMode(mode);
+              localStorage.setItem(VIEW_MODE_KEY, mode);
+            }}
+          >
+            <TabsList>
+              <TabsTrigger value="grid" className="gap-1.5">
+                <LayoutGrid className="h-3.5 w-3.5" />
+                Grid
+              </TabsTrigger>
+              <TabsTrigger value="board" className="gap-1.5">
+                <FolderKanban className="h-3.5 w-3.5" />
+                Board
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
         {/* Content */}
         {loading ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Card key={i}>
-                <CardContent className="p-5 space-y-3">
-                  <Skeleton className="h-5 w-3/4" />
-                  <Skeleton className="h-4 w-full" />
-                  <div className="flex gap-2">
-                    <Skeleton className="h-5 w-16 rounded-full" />
-                    <Skeleton className="h-5 w-12 rounded-full" />
+          viewMode === "grid" ? (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Card key={i}>
+                  <CardContent className="p-5 space-y-3">
+                    <Skeleton className="h-5 w-3/4" />
+                    <Skeleton className="h-4 w-full" />
+                    <div className="flex gap-2">
+                      <Skeleton className="h-5 w-16 rounded-full" />
+                      <Skeleton className="h-5 w-12 rounded-full" />
+                    </div>
+                    <Skeleton className="h-2 w-full" />
+                    <div className="flex justify-between">
+                      <Skeleton className="h-4 w-20" />
+                      <Skeleton className="h-4 w-16" />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="flex gap-3 overflow-x-auto" style={{ height: "calc(100vh - 280px)" }}>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="min-w-[280px] w-[280px] flex-shrink-0 space-y-3">
+                  <Skeleton className="h-6 w-24" />
+                  <div className="space-y-2">
+                    {Array.from({ length: 2 }).map((_, j) => (
+                      <Skeleton key={j} className="h-28 w-full rounded-lg" />
+                    ))}
                   </div>
-                  <Skeleton className="h-2 w-full" />
-                  <div className="flex justify-between">
-                    <Skeleton className="h-4 w-20" />
-                    <Skeleton className="h-4 w-16" />
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                </div>
+              ))}
+            </div>
+          )
         ) : error ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12 text-center">
@@ -196,6 +240,12 @@ export default function ProjectsPage() {
               </Button>
             </CardContent>
           </Card>
+        ) : viewMode === "board" ? (
+          <ProjectKanbanBoard
+            projects={projects}
+            statusFilter={statusFilter}
+            onRefresh={loadProjects}
+          />
         ) : filtered.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12 text-center">
