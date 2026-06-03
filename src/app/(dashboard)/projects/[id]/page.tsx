@@ -461,6 +461,13 @@ export default function ProjectDetailPage() {
     } catch { toast.error("Failed to update milestone"); }
   };
 
+  const handleMilestoneDueDateChange = async (milestone: ProjectMilestone, dueDate: Date | null) => {
+    try {
+      await updateMilestone(milestone.id, { dueDate } as any);
+      setMilestones((prev) => prev.map((m) => m.id === milestone.id ? { ...m, dueDate: dueDate ? { seconds: Math.floor(dueDate.getTime() / 1000), nanoseconds: 0 } as any : null } : m));
+    } catch { toast.error("Failed to update milestone due date"); }
+  };
+
   // ─── Inline Task Creation Handlers ───────────────────────────────────────────
 
   const handleStartInlineTask = () => {
@@ -742,6 +749,7 @@ export default function ProjectDetailPage() {
                   onMilestoneStatusChange={handleMilestoneStatusChange}
                   onMilestoneNameChange={handleMilestoneNameChange}
                   onDeleteMilestone={handleDeleteMilestone}
+                  onMilestoneDueDateChange={handleMilestoneDueDateChange}
                 />
               </div>
 

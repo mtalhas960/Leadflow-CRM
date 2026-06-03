@@ -33,6 +33,7 @@ import {
   ChevronDown,
   ChevronRight,
   Trash2,
+  Calendar,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -302,6 +303,7 @@ interface WorkflowSectionProps {
   onMilestoneStatusChange?: (milestone: ProjectMilestone, newStatus: "Pending" | "Completed" | "Failed") => void;
   onMilestoneNameChange?: (milestone: ProjectMilestone, newName: string) => void;
   onDeleteMilestone?: (milestoneId: string) => void;
+  onMilestoneDueDateChange?: (milestone: ProjectMilestone, dueDate: Date | null) => void;
 }
 
 export default function WorkflowSection({
@@ -343,9 +345,11 @@ export default function WorkflowSection({
   onMilestoneStatusChange,
   onMilestoneNameChange,
   onDeleteMilestone,
+  onMilestoneDueDateChange,
 }: WorkflowSectionProps) {
   const [viewMode, setViewMode] = useState<"list" | "board">("list");
   const [activeMsDropdown, setActiveMsDropdown] = useState<string | null>(null);
+  const [activeMsDatePicker, setActiveMsDatePicker] = useState<string | null>(null);
   const topLevelTasks = tasks.filter((t) => !t.parentTaskId && !t.isSubtask && !t.milestoneId);
   const completedTasks = tasks.filter((t) => t.status.parent === "Complete").length;
 
@@ -476,11 +480,48 @@ export default function WorkflowSection({
                           </div>
                         </div>
                         <div className="flex items-center gap-3 shrink-0">
-                          {ms.dueDate && (
-                            <span className="text-xs text-muted-foreground">
-                              {ms.dueDate.toDate().toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                            </span>
-                          )}
+                          {/* Milestone due date picker */}
+                          <div className="relative">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setActiveMsDatePicker(activeMsDatePicker === ms.id ? null : ms.id); setActiveMsDropdown(null); }}
+                              className="flex items-center gap-1 text-xs text-muted-foreground hover:bg-accent rounded px-1.5 py-0.5 -ml-1.5 transition-colors"
+                              draggable="false"
+                            >
+                              <Calendar className="h-3 w-3" />
+                              {ms.dueDate ? (
+                                <span>{ms.dueDate.toDate().toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                              ) : (
+                                <span className="hover:text-foreground">Set date</span>
+                              )}
+                            </button>
+                            {activeMsDatePicker === ms.id && (
+                              <>
+                                <div className="fixed inset-0 z-40" onClick={() => setActiveMsDatePicker(null)} />
+                                <div className="absolute left-0 top-full mt-1 z-50 bg-popover border border-border rounded-lg shadow-lg p-3">
+                                  <input
+                                    type="date"
+                                    className="w-full px-2 py-1.5 text-xs border border-border rounded bg-background text-foreground"
+                                    value={ms.dueDate ? ms.dueDate.toDate().toISOString().split("T")[0] : ""}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      if (val) onMilestoneDueDateChange?.(ms, new Date(val + "T00:00:00"));
+                                      else onMilestoneDueDateChange?.(ms, null);
+                                      setActiveMsDatePicker(null);
+                                    }}
+                                    autoFocus
+                                  />
+                                  {ms.dueDate && (
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); onMilestoneDueDateChange?.(ms, null); setActiveMsDatePicker(null); }}
+                                      className="w-full text-left mt-1.5 px-2 py-1 text-[10px] text-destructive hover:bg-accent rounded transition-colors"
+                                    >
+                                      Clear due date
+                                    </button>
+                                  )}
+                                </div>
+                              </>
+                            )}
+                          </div>
                           {/* Status badge with dropdown */}
                           <span className="relative">
                             <button
