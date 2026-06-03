@@ -71,6 +71,7 @@ import ContractsCard from "@/components/projects/project-detail/sidebar-cards/co
 import InvoicesCard from "@/components/projects/project-detail/sidebar-cards/invoices-card";
 import ProfitabilityCard from "@/components/projects/project-detail/sidebar-cards/profitability-card";
 import ProjectFiles from "@/components/projects/project-detail/project-files";
+import ProjectTimeTracking from "@/components/projects/project-detail/project-time-tracking";
 import {
   ArrowLeft,
   Calendar,
@@ -551,13 +552,9 @@ export default function ProjectDetailPage() {
           <ProjectFiles projectId={projectId} workspaceId={project.workspaceId} userId={firebaseUser?.uid || "demo"} />
         )}
 
-        {/* ─── TIME (placeholder) ─── */}
+        {/* ─── TIME ─── */}
         {activeTab === "time" && (
-          <div className="text-center py-16 border rounded-lg border-dashed">
-            <Clock className="h-12 w-12 mx-auto text-muted-foreground/30 mb-4" />
-            <h3 className="text-lg font-semibold text-foreground">Time Tracking</h3>
-            <p className="text-sm text-muted-foreground mt-1">Time tracking coming soon.</p>
-          </div>
+          <ProjectTimeTracking projectId={projectId} workspaceId={project.workspaceId} userId={firebaseUser?.uid || "demo"} />
         )}
 
         {/* ── Edit Dialog ── */}
