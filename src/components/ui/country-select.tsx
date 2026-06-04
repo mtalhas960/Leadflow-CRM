@@ -29,7 +29,9 @@ export function CountrySelect({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const selected = useMemo(
-    () => COUNTRIES.find((c) => c.code === value),
+    () =>
+      COUNTRIES.find((c) => c.code === value) ||
+      COUNTRIES.find((c) => c.name.toLowerCase() === value.toLowerCase()),
     [value]
   );
 

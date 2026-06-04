@@ -1,4 +1,5 @@
 import type { Lead, CustomField } from "@/types";
+import { COUNTRIES } from "@/lib/countries";
 
 const CSV_HEADERS = [
   "First Name",
@@ -201,6 +202,12 @@ export function mapCsvRowToLead(
     return null;
   }
 
+  // Convert country name to ISO code (CountrySelect expects codes like "NL", not "Netherlands")
+  const rawCountry = getValue("country");
+  const countryCode = rawCountry
+    ? (COUNTRIES.find((c) => c.name.toLowerCase() === rawCountry.toLowerCase())?.code || rawCountry)
+    : null;
+
   const valueStr = getValue("value");
   const tagsStr = getValue("tags");
 
@@ -232,7 +239,7 @@ export function mapCsvRowToLead(
     currency: getValue("currency") || "USD",
     website: getValue("website") || null,
     linkedin: getValue("linkedin") || null,
-    country: getValue("country") || null,
+    country: countryCode,
     city: getValue("city") || null,
     tags: tagsStr ? tagsStr.split(";").map((t) => t.trim()).filter(Boolean) : [],
     notes: getValue("notes") || null,
