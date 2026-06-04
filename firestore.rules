@@ -103,6 +103,21 @@ service cloud.firestore {
          hasRole(workspaceId, 'admin'));
     }
 
+    // Spreadsheets (per-workspace subcollection)
+    match /workspaces/{workspaceId}/spreadsheets/{spreadsheetId} {
+      // Workspace members can read
+      allow read: if isWorkspaceMember(workspaceId);
+      // Authenticated workspace members can create
+      allow create: if isAuthenticated() && isWorkspaceMember(workspaceId) &&
+        request.resource.data.workspaceId == workspaceId;
+      // Authenticated workspace members can update
+      allow update: if isAuthenticated() && isWorkspaceMember(workspaceId);
+      // Only owner/admin can delete
+      allow delete: if isAuthenticated() &&
+        (get(/databases/$(database)/documents/workspaces/$(workspaceId)).data.ownerId == request.auth.uid ||
+         hasRole(workspaceId, 'admin'));
+    }
+
     // Client checklist progress (per-user)
     match /client_checklist_progress/{docId} {
       // Allow reads when doc doesn't exist (null resource) or belongs to user

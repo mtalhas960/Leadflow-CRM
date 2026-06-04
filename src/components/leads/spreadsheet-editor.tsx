@@ -1,0 +1,201 @@
+"use client";
+
+import { useEffect, useRef, useState, useCallback } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "@/lib/toast";
+import {
+  updateSpreadsheetSnapshot,
+  updateSpreadsheetName,
+} from "@/lib/firebase/spreadsheets";
+import { Loader2, Save, Download } from "lucide-react";
+import type { IWorkbookData } from "@univerjs/core";
+
+interface SpreadsheetEditorProps {
+  workspaceId: string;
+  spreadsheetId: string;
+  initialName: string;
+  initialSnapshot: IWorkbookData | null;
+}
+
+export function SpreadsheetEditor({
+  workspaceId,
+  spreadsheetId,
+  initialName,
+  initialSnapshot,
+}: SpreadsheetEditorProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [name, setName] = useState(initialName);
+  const [saving, setSaving] = useState(false);
+  const [initialized, setInitialized] = useState(false);
+  const univerRef = useRef<{ getSnapshot: () => IWorkbookData; dispose: () => void } | null>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingSnapshotRef = useRef<IWorkbookData | null>(null);
+
+  // Debounced save to Firestore
+  const debouncedSave = useCallback(
+    (snapshot: IWorkbookData) => {
+      pendingSnapshotRef.current = snapshot;
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = setTimeout(async () => {
+        if (!pendingSnapshotRef.current) return;
+        setSaving(true);
+        try {
+          await updateSpreadsheetSnapshot(
+            workspaceId,
+            spreadsheetId,
+            pendingSnapshotRef.current
+          );
+          pendingSnapshotRef.current = null;
+        } catch {
+          toast.error("Failed to auto-save spreadsheet");
+        } finally {
+          setSaving(false);
+        }
+      }, 2000);
+    },
+    [workspaceId, spreadsheetId]
+  );
+
+  // Initialize Univer
+  useEffect(() => {
+    let disposed = false;
+
+    async function init() {
+      // Dynamic import to avoid SSR issues
+      const [
+        { UniverSheetsCorePreset },
+        UniverPresetSheetsCoreEnUS,
+        { createUniver, LocaleType, mergeLocales },
+      ] = await Promise.all([
+        import("@univerjs/preset-sheets-core"),
+        import("@univerjs/preset-sheets-core/locales/en-US"),
+        import("@univerjs/presets"),
+      ]);
+
+      // Import CSS
+      await import("@univerjs/preset-sheets-core/lib/index.css");
+
+      if (disposed || !containerRef.current) return;
+
+      const container = containerRef.current;
+
+      const { univerAPI } = createUniver({
+        locale: LocaleType.EN_US,
+        locales: {
+          [LocaleType.EN_US]: mergeLocales(
+            UniverPresetSheetsCoreEnUS as Record<string, any>
+          ),
+        },
+        presets: [
+          UniverSheetsCorePreset({
+            container,
+          }),
+        ],
+      });
+
+      if (disposed) {
+        univerAPI.disposeUnit("");
+        return;
+      }
+
+      // Create workbook with existing snapshot or empty
+      const workbook = initialSnapshot
+        ? univerAPI.createWorkbook(initialSnapshot as any)
+        : univerAPI.createWorkbook({});
+
+      // Set up auto-save on any command
+      const disposable = univerAPI.onCommandExecuted(() => {
+        try {
+          const snapshot = workbook.getSnapshot() as unknown as IWorkbookData;
+          debouncedSave(snapshot);
+        } catch {
+          // Snapshot might not be ready
+        }
+      });
+
+      univerRef.current = {
+        getSnapshot: () => workbook.getSnapshot() as unknown as IWorkbookData,
+        dispose: () => {
+          disposable.dispose();
+          univerAPI.disposeUnit(workbook.getId());
+        },
+      };
+
+      setInitialized(true);
+    }
+
+    init();
+
+    return () => {
+      disposed = true;
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      if (univerRef.current) {
+        univerRef.current.dispose();
+        univerRef.current = null;
+      }
+    };
+  }, []); // Only run once on mount
+
+  const handleNameChange = async (newName: string) => {
+    setName(newName);
+    try {
+      await updateSpreadsheetName(workspaceId, spreadsheetId, newName);
+    } catch {
+      toast.error("Failed to rename spreadsheet");
+    }
+  };
+
+  const handleManualSave = async () => {
+    if (!univerRef.current) return;
+    setSaving(true);
+    try {
+      const snapshot = univerRef.current.getSnapshot();
+      await updateSpreadsheetSnapshot(workspaceId, spreadsheetId, snapshot);
+      toast.success("Saved");
+    } catch {
+      toast.error("Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* Header bar */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <Input
+            value={name}
+            onChange={(e) => handleNameChange(e.target.value)}
+            className="h-8 w-64 text-sm font-medium border-none px-0 focus-visible:ring-0 focus-visible:border-b focus-visible:rounded-none"
+          />
+          {saving && (
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <Loader2 className="h-3 w-3 animate-spin" /> Saving...
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleManualSave}>
+            <Save className="mr-1.5 h-4 w-4" />
+            Save
+          </Button>
+        </div>
+      </div>
+
+      {/* Univer container */}
+      {!initialized && (
+        <div className="rounded-lg border">
+          <Skeleton className="h-[70vh] w-full rounded-lg" />
+        </div>
+      )}
+      <div
+        ref={containerRef}
+        className="rounded-lg border overflow-hidden"
+        style={{ height: "70vh", display: initialized ? "block" : "none" }}
+      />
+    </div>
+  );
+}
