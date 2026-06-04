@@ -126,30 +126,96 @@ export function SpreadsheetEditor({
         { UniverSheetsCorePreset },
         UniverPresetSheetsCoreEnUS,
         { createUniver, LocaleType, mergeLocales },
+        { UniverSheetsDataValidationPreset },
+        UniverPresetSheetsDataValidationEnUS,
+        { UniverSheetsFilterPreset },
+        UniverPresetSheetsFilterEnUS,
+        { UniverSheetsConditionalFormattingPreset },
+        UniverPresetSheetsConditionalFormattingEnUS,
+        { UniverSheetsFindReplacePreset },
+        UniverPresetSheetsFindReplaceEnUS,
+        { UniverSheetsSortPreset },
+        UniverPresetSheetsSortEnUS,
+        { UniverSheetsHyperLinkPreset },
+        UniverPresetSheetsHyperLinkEnUS,
+        { UniverSheetsNotePreset },
+        UniverPresetSheetsNoteEnUS,
+        { UniverSheetsThreadCommentPreset },
+        UniverPresetSheetsThreadCommentEnUS,
+        { UniverSheetsDrawingPreset },
+        UniverPresetSheetsDrawingEnUS,
       ] = await Promise.all([
         import("@univerjs/preset-sheets-core"),
         import("@univerjs/preset-sheets-core/locales/en-US"),
         import("@univerjs/presets"),
+        import("@univerjs/preset-sheets-data-validation"),
+        import("@univerjs/preset-sheets-data-validation/locales/en-US"),
+        import("@univerjs/preset-sheets-filter"),
+        import("@univerjs/preset-sheets-filter/locales/en-US"),
+        import("@univerjs/preset-sheets-conditional-formatting"),
+        import("@univerjs/preset-sheets-conditional-formatting/locales/en-US"),
+        import("@univerjs/preset-sheets-find-replace"),
+        import("@univerjs/preset-sheets-find-replace/locales/en-US"),
+        import("@univerjs/preset-sheets-sort"),
+        import("@univerjs/preset-sheets-sort/locales/en-US"),
+        import("@univerjs/preset-sheets-hyper-link"),
+        import("@univerjs/preset-sheets-hyper-link/locales/en-US"),
+        import("@univerjs/preset-sheets-note"),
+        import("@univerjs/preset-sheets-note/locales/en-US"),
+        import("@univerjs/preset-sheets-thread-comment"),
+        import("@univerjs/preset-sheets-thread-comment/locales/en-US"),
+        import("@univerjs/preset-sheets-drawing"),
+        import("@univerjs/preset-sheets-drawing/locales/en-US"),
       ]);
 
-      await import("@univerjs/preset-sheets-core/lib/index.css");
+      await Promise.all([
+        import("@univerjs/preset-sheets-core/lib/index.css"),
+        import("@univerjs/preset-sheets-data-validation/lib/index.css"),
+        import("@univerjs/preset-sheets-filter/lib/index.css"),
+        import("@univerjs/preset-sheets-conditional-formatting/lib/index.css"),
+        import("@univerjs/preset-sheets-find-replace/lib/index.css"),
+        import("@univerjs/preset-sheets-sort/lib/index.css"),
+        import("@univerjs/preset-sheets-hyper-link/lib/index.css"),
+        import("@univerjs/preset-sheets-note/lib/index.css"),
+        import("@univerjs/preset-sheets-thread-comment/lib/index.css"),
+        import("@univerjs/preset-sheets-drawing/lib/index.css"),
+      ]);
 
       if (disposed || !containerRef.current) return;
 
       const container = containerRef.current;
 
+      /* eslint-disable @typescript-eslint/no-explicit-any */
       const { univerAPI } = createUniver({
         locale: LocaleType.EN_US,
         locales: {
           [LocaleType.EN_US]: mergeLocales(
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            UniverPresetSheetsCoreEnUS as any
+            UniverPresetSheetsCoreEnUS as any,
+            UniverPresetSheetsDataValidationEnUS as any,
+            UniverPresetSheetsFilterEnUS as any,
+            UniverPresetSheetsConditionalFormattingEnUS as any,
+            UniverPresetSheetsFindReplaceEnUS as any,
+            UniverPresetSheetsSortEnUS as any,
+            UniverPresetSheetsHyperLinkEnUS as any,
+            UniverPresetSheetsNoteEnUS as any,
+            UniverPresetSheetsThreadCommentEnUS as any,
+            UniverPresetSheetsDrawingEnUS as any,
           ),
         },
         presets: [
           UniverSheetsCorePreset({ container }),
+          UniverSheetsDataValidationPreset(),
+          UniverSheetsFilterPreset(),
+          UniverSheetsConditionalFormattingPreset(),
+          UniverSheetsFindReplacePreset(),
+          UniverSheetsSortPreset(),
+          UniverSheetsHyperLinkPreset(),
+          UniverSheetsNotePreset(),
+          UniverSheetsThreadCommentPreset(),
+          UniverSheetsDrawingPreset(),
         ],
       });
+      /* eslint-enable @typescript-eslint/no-explicit-any */
 
       if (disposed) {
         univerAPI.disposeUnit("");
