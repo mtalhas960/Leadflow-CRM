@@ -97,7 +97,7 @@ import {
 import Link from "next/link";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 
 // ─── Status Config ────────────────────────────────────────────────────────────
 
@@ -258,6 +258,29 @@ export default function ProjectDetailPage() {
     }
   }, [projectId, activeTab]);
 
+  // ─── Auto-Progress Sync ──────────────────────────────────────────────────────
+  // Compute progress from tasks locally (independent of project.progress),
+  // then persist to Firestore so project cards show correct %
+
+  const computedProgress = useMemo(() => {
+    if (!tasks.length) return project?.progress ?? 0;
+    const completed = tasks.filter((t) => t.status.parent === "Complete").length;
+    return Math.round((completed / tasks.length) * 100);
+  }, [tasks, project?.progress]);
+
+  const lastSyncedProgress = useRef<number>(-1);
+
+  useEffect(() => {
+    if (!projectId || !project || tasks.length === 0) return;
+    const completed = tasks.filter((t) => t.status.parent === "Complete").length;
+    const pct = Math.round((completed / tasks.length) * 100);
+    if (pct !== lastSyncedProgress.current) {
+      lastSyncedProgress.current = pct;
+      setProject((prev) => (prev ? { ...prev, progress: pct } : prev));
+      updateProjectFB(projectId, { progress: pct }).catch(() => {});
+    }
+  }, [tasks, projectId, project]);
+
   // ─── Edit / Delete ───────────────────────────────────────────────────────────
 
   const startEditing = () => {
@@ -375,9 +398,11 @@ export default function ProjectDetailPage() {
 
   const handleDeleteTask = async (task: ProjectTask) => {
     try {
-      await deleteTask(task.id);
-      setTasks((prev) => prev.filter((t) => t.id !== task.id));
-      toast.success("Task deleted");
+      const subtaskIds = tasks.filter((t) => t.parentTaskId === task.id).map((t) => t.id);
+      const allIds = [task.id, ...subtaskIds];
+      await Promise.all(allIds.map((id) => deleteTask(id)));
+      setTasks((prev) => prev.filter((t) => !allIds.includes(t.id)));
+      toast.success(`Task deleted${subtaskIds.length > 0 ? ` (${subtaskIds.length} subtask(s))` : ""}`);
     } catch { toast.error("Failed to delete task"); }
   };
 
@@ -411,6 +436,20 @@ export default function ProjectDetailPage() {
     } catch { toast.error("Failed to save task order"); }
   };
 
+  // ─── Project Status (Optimistic) ─────────────────────────────────────────────
+
+  const handleProjectStatusChange = (newStatus: ProjectStatus) => {
+    if (!project || newStatus === project.status) return;
+    const oldStatus = project.status;
+    setProject((prev) => (prev ? { ...prev, status: newStatus } : prev));
+    updateProjectFB(project.id, { status: newStatus } as any)
+      .then(() => toast.success(`Status changed to ${STATUS_CONFIG[newStatus]?.label || newStatus}`))
+      .catch(() => {
+        setProject((prev) => (prev ? { ...prev, status: oldStatus } : prev));
+        toast.error("Failed to update status");
+      });
+  };
+
   // ─── Milestone Handlers ──────────────────────────────────────────────────────
 
   const handleCreateMilestone = async (data: { milestoneName: string; description: string; dueDate: Date | null }) => {
@@ -431,9 +470,14 @@ export default function ProjectDetailPage() {
 
   const handleDeleteMilestone = async (milestoneId: string) => {
     try {
+      const msTaskIds = tasks.filter((t) => t.milestoneId === milestoneId).map((t) => t.id);
+      const subOfMsTaskIds = tasks.filter((t) => msTaskIds.includes(t.parentTaskId || "")).map((t) => t.id);
+      const allTaskIds = [...msTaskIds, ...subOfMsTaskIds];
       await deleteMilestone(milestoneId);
+      await Promise.all(allTaskIds.map((id) => deleteTask(id)));
       setMilestones((prev) => prev.filter((m) => m.id !== milestoneId));
-      toast.success("Milestone deleted");
+      setTasks((prev) => prev.filter((t) => !allTaskIds.includes(t.id)));
+      toast.success(`Milestone deleted${allTaskIds.length > 0 ? ` (${allTaskIds.length} task(s))` : ""}`);
     } catch { toast.error("Failed to delete milestone"); }
   };
 
@@ -698,7 +742,7 @@ export default function ProjectDetailPage() {
             {/* Progress timeline (full width) */}
             <Card className="border-border">
               <CardContent className="p-5">
-                <ProgressTimeline progress={project.progress} tasksCompleted={tasksCompleted} tasksTotal={tasks.length} />
+                <ProgressTimeline progress={computedProgress} tasksCompleted={tasksCompleted} tasksTotal={tasks.length} />
               </CardContent>
             </Card>
 
@@ -756,7 +800,7 @@ export default function ProjectDetailPage() {
 
               {/* Right: Sidebar cards - sticky & scrollable */}
               <div className="w-full lg:w-[35%] space-y-4 lg:sticky lg:top-4 lg:self-start max-h-[calc(100vh-180px)] overflow-y-auto custom-scrollbar">
-                <ProjectInfoCard project={project} memberMap={memberMap} onProjectUpdated={loadProject} />
+                <ProjectInfoCard project={project} memberMap={memberMap} onStatusChange={handleProjectStatusChange} />
                 <TeamCard projectId={projectId} members={members} memberIds={project.memberIds} onMembersChange={(newIds) => {
                   setProject((prev) => prev ? { ...prev, memberIds: newIds } : prev);
                 }} />

@@ -1427,6 +1427,18 @@ export class DemoStore {
     return id;
   }
 
+  updateProjectMilestone(id: string, data: Record<string, unknown>): void {
+    const idx = this._milestones.findIndex((m) => m.id === id);
+    if (idx === -1) return;
+    this._milestones[idx] = { ...this._milestones[idx], ...data, updatedAt: Timestamp.now() } as ProjectMilestone;
+  }
+
+  deleteProjectMilestone(id: string): void {
+    const idx = this._milestones.findIndex((m) => m.id === id);
+    if (idx === -1) return;
+    this._milestones[idx] = { ...this._milestones[idx], isDeleted: true, updatedAt: Timestamp.now() };
+  }
+
   // ── Project Note Operations ──
 
   getProjectNotes(projectId: string): ProjectNote[] {

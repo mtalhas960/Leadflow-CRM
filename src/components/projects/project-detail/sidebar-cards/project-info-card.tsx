@@ -3,8 +3,6 @@
 import { useState } from "react";
 import { Calendar, DollarSign, User, ChevronDown } from "lucide-react";
 import type { Project, ProjectStatus, WorkspaceMember } from "@/types";
-import { updateProject } from "@/lib/firebase/projects";
-import { toast } from "@/lib/toast";
 
 const STATUS_CONFIG: Record<string, { label: string; class: string }> = {
   active: { label: "Active", class: "bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400" },
@@ -16,12 +14,11 @@ const STATUS_CONFIG: Record<string, { label: string; class: string }> = {
 interface ProjectInfoCardProps {
   project: Project;
   memberMap: Map<string, { displayName: string; photoURL?: string | null }>;
-  onProjectUpdated?: () => void;
+  onStatusChange?: (newStatus: ProjectStatus) => void;
 }
 
-export default function ProjectInfoCard({ project, memberMap, onProjectUpdated }: ProjectInfoCardProps) {
+export default function ProjectInfoCard({ project, memberMap, onStatusChange }: ProjectInfoCardProps) {
   const [showStatusMenu, setShowStatusMenu] = useState(false);
-  const [saving, setSaving] = useState(false);
 
   const clientNames = project.clients
     .map((cid) => memberMap.get(cid)?.displayName)
@@ -32,19 +29,10 @@ export default function ProjectInfoCard({ project, memberMap, onProjectUpdated }
     ? Math.ceil((project.dueDate.toDate().getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : null;
 
-  const handleStatusChange = async (newStatus: ProjectStatus) => {
+  const handleStatusChange = (newStatus: ProjectStatus) => {
     if (newStatus === project.status) return;
-    setSaving(true);
-    try {
-      await updateProject(project.id, { status: newStatus } as any);
-      toast.success(`Status changed to ${STATUS_CONFIG[newStatus]?.label || newStatus}`);
-      onProjectUpdated?.();
-    } catch {
-      toast.error("Failed to update status");
-    } finally {
-      setSaving(false);
-      setShowStatusMenu(false);
-    }
+    setShowStatusMenu(false);
+    onStatusChange?.(newStatus);
   };
 
   return (
@@ -77,7 +65,6 @@ export default function ProjectInfoCard({ project, memberMap, onProjectUpdated }
                 <button
                   key={key}
                   onClick={() => handleStatusChange(key as ProjectStatus)}
-                  disabled={saving}
                   className={`w-full px-3 py-1.5 text-left text-xs flex items-center gap-2 hover:bg-accent ${
                     key === project.status ? "font-medium text-foreground" : "text-muted-foreground"
                   }`}

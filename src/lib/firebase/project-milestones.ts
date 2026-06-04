@@ -96,6 +96,12 @@ export type UpdateMilestoneData = Partial<
 };
 
 export async function updateMilestone(id: string, data: UpdateMilestoneData): Promise<void> {
+  if (isDemoMode()) {
+    const { demoStore } = await import("@/lib/demo/demo-data");
+    demoStore.updateProjectMilestone(id, data);
+    return;
+  }
+
   const updatePayload: Record<string, unknown> = {
     ...data,
     updatedAt: serverTimestamp(),
@@ -111,6 +117,12 @@ export async function updateMilestone(id: string, data: UpdateMilestoneData): Pr
 // ── Delete (soft) ────────────────────────────────────────────────────────────
 
 export async function deleteMilestone(id: string): Promise<void> {
+  if (isDemoMode()) {
+    const { demoStore } = await import("@/lib/demo/demo-data");
+    demoStore.deleteProjectMilestone(id);
+    return;
+  }
+
   await updateDoc(doc(db, COLLECTION, id), {
     isDeleted: true,
     updatedAt: serverTimestamp(),
