@@ -607,6 +607,14 @@ function VersionPreviewModal({
   useEffect(() => { if (open && files.length > 0) setActiveFile(files[0]); }, [open, files]);
 
   const getUrl = (f: DeliverableFileAttachment) => f.cloudinaryUrl || f.filePath;
+  const getProxyUrl = (f: DeliverableFileAttachment) => {
+    const url = getUrl(f);
+    if (!url) return "";
+    if (url.includes("res.cloudinary.com")) {
+      return `/api/deliverables/proxy-file?url=${encodeURIComponent(url)}`;
+    }
+    return url;
+  };
   const formatTS = (s: number) => {
     const m = Math.floor(s / 60); const sec = Math.floor(s % 60);
     return `${m}:${sec.toString().padStart(2, "0")}`;
@@ -751,19 +759,21 @@ function VersionPreviewModal({
                     // Videos: inline preview works
                     if (activeFile.mimeType?.startsWith("video/"))
                       return <video ref={videoRef} controls className="w-full max-h-[50vh] rounded" src={url} />;
-                    // PDFs & other files: Cloudinary blocks iframes, show download/open prompt
+                    // PDFs: use proxy to bypass Cloudinary's X-Frame-Options
+                    if (activeFile.mimeType?.includes("pdf")) {
+                      return (
+                        <iframe
+                          src={getProxyUrl(activeFile)}
+                          className="w-full h-[60vh] rounded border-0"
+                          title={activeFile.fileName}
+                        />
+                      );
+                    }
+                    // Other files: show download/open prompt
                     return (
                       <div className="text-center py-8">
-                        {activeFile.mimeType?.includes("pdf") ? (
-                          <FileText className="h-12 w-12 mx-auto text-red-400/60 mb-3" />
-                        ) : (
-                          <File className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
-                        )}
-                        <p className="text-xs text-muted-foreground mb-1">
-                          {activeFile.mimeType?.includes("pdf")
-                            ? "PDF preview unavailable in browser"
-                            : "Preview not available"}
-                        </p>
+                        <File className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
+                        <p className="text-xs text-muted-foreground mb-1">Preview not available</p>
                         <p className="text-[10px] text-muted-foreground/60 mb-3">
                           Open in new tab or download to view
                         </p>
