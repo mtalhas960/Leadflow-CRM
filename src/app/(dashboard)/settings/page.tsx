@@ -101,22 +101,24 @@ export default function SettingsPage() {
   const { firebaseUser } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<Tab>(() => {
-    // URL search param takes priority (persists across reloads)
-    const tabParam = searchParams.get("tab") as Tab | null;
-    if (tabParam && ["profile","workspace","members","preferences","integrations","client-portal"].includes(tabParam)) {
-      return tabParam;
+  const VALID_SETTINGS_TABS = ["profile","workspace","members","preferences","integrations","client-portal"];
+  const [activeTab, setActiveTab] = useState<Tab>("profile");
+  // Sync tab from URL after hydration; fallback to localStorage hint
+  useEffect(() => {
+    const tabParam = searchParams?.get("tab") as Tab | null;
+    if (tabParam && VALID_SETTINGS_TABS.includes(tabParam)) {
+      setActiveTab(tabParam);
+      return;
     }
     // Fallback: navigated from sidebar user profile click (legacy)
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("leadflow_settings_tab");
       if (saved === "profile") {
         localStorage.removeItem("leadflow_settings_tab");
-        return "profile";
+        setActiveTab("profile");
       }
     }
-    return "profile";
-  });
+  }, [searchParams]);
   const [workspaceName, setWorkspaceName] = useState("");
   const [savingName, setSavingName] = useState(false);
   const [members, setMembers] = useState<WorkspaceMember[]>([]);

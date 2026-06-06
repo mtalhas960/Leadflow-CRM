@@ -156,11 +156,14 @@ export default function ProjectDetailPage() {
 
   // Tab — persisted via URL search param
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<TabId>(() => {
-    const tabParam = searchParams.get("tab");
-    if (tabParam && TABS.some(t => t.id === tabParam)) return tabParam as TabId;
-    return "overview";
-  });
+  const [activeTab, setActiveTab] = useState<TabId>("overview");
+  // Sync tab from URL after hydration (useSearchParams can be null during SSR)
+  useEffect(() => {
+    const tabParam = searchParams?.get("tab");
+    if (tabParam && TABS.some(t => t.id === tabParam)) {
+      setActiveTab(tabParam as TabId);
+    }
+  }, [searchParams]);
 
   // Task data
   const [tasks, setTasks] = useState<ProjectTask[]>([]);
