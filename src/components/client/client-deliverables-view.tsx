@@ -162,11 +162,7 @@ function ClientVersionRow({
               <button
                 key={f.id}
                 className="w-14 h-14 rounded border border-border overflow-hidden flex-shrink-0 relative group hover:border-primary transition-colors"
-                onClick={() => {
-                  if (f.mimeType.startsWith("image/")) onImageMarkup(f);
-                  else if (f.mimeType.startsWith("video/") || f.mimeType.startsWith("audio/")) onVideoAnnotate(f);
-                  else onPreview(`${deliverableTitle} - V${version.versionNumber}`, version.files);
-                }}
+                onClick={() => onPreview(`${deliverableTitle} - V${version.versionNumber}`, version.files, version.links)}
                 title={f.originalName || f.fileName}
               >
                 {f.mimeType.startsWith("image/") && (f.cloudinaryUrl || f.filePath) ? (
@@ -595,50 +591,46 @@ function FilePreviewDialog({ open, onOpenChange, files, links, title }: {
 
   const getUrl = (f: DeliverableFileAttachment) => f.cloudinaryUrl || f.filePath;
 
-  // Categorize files
   const images = files.filter((f) => getFileCategory(f.mimeType) === "image");
   const videos = files.filter((f) => getFileCategory(f.mimeType) === "video");
   const documents = files.filter((f) => getFileCategory(f.mimeType) === "document");
   const audio = files.filter((f) => getFileCategory(f.mimeType) === "audio");
   const downloads = files.filter((f) => getFileCategory(f.mimeType) === "download");
 
-  const renderCategorySection = (label: string, icon: React.ReactNode, items: DeliverableFileAttachment[]) => {
-    if (items.length === 0) return null;
+  const renderCat = (label: string, icon: React.ReactNode, items: DeliverableFileAttachment[]) => {
+    if (!items.length) return null;
     return (
       <div>
         <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1 uppercase tracking-wide">
           {icon} {label} ({items.length})
         </h4>
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+        <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">
           {items.map((f) => (
-            <button
-              key={f.id}
-              onClick={() => {
-                if (f.mimeType.includes("pdf")) { setPdfFile(f); setShowPDF(true); }
-                else setActiveFile(f);
-              }}
+            <button key={f.id} onClick={() => {
+              if (f.mimeType.includes("pdf")) { setPdfFile(f); setShowPDF(true); }
+              else setActiveFile(f);
+            }}
               className={`border rounded-lg overflow-hidden group hover:border-primary transition-colors ${
-                activeFile?.id === f.id ? "ring-2 ring-primary border-primary" : ""
-              }`}
+                activeFile?.id === f.id ? "ring-2 ring-primary border-primary" : ""}`}
             >
               {f.mimeType.startsWith("image/") && getUrl(f) ? (
                 <div className="aspect-square bg-muted/20">
-                  <img src={getUrl(f)} alt={f.originalName || f.fileName} className="w-full h-full object-cover" />
+                  <img src={getUrl(f)} alt="" className="w-full h-full object-cover" />
+                </div>
+              ) : f.mimeType.includes("pdf") ? (
+                <div className="aspect-square flex items-center justify-center bg-red-50 dark:bg-red-950/30">
+                  <FileText className="h-8 w-8 text-red-400/60" />
                 </div>
               ) : f.mimeType.startsWith("video/") ? (
                 <div className="aspect-square flex items-center justify-center bg-muted/30">
                   <Film className="h-8 w-8 text-muted-foreground/40" />
-                </div>
-              ) : f.mimeType.includes("pdf") ? (
-                <div className="aspect-square flex items-center justify-center bg-muted/30">
-                  <FileText className="h-8 w-8 text-red-400/60" />
                 </div>
               ) : (
                 <div className="aspect-square flex items-center justify-center bg-muted/30">
                   <File className="h-8 w-8 text-muted-foreground/40" />
                 </div>
               )}
-              <div className="p-1.5">
+              <div className="p-1">
                 <p className="text-[9px] truncate">{f.originalName || f.fileName}</p>
                 <p className="text-[8px] text-muted-foreground">{formatFileSize(f.fileSize)}</p>
               </div>
@@ -658,14 +650,13 @@ function FilePreviewDialog({ open, onOpenChange, files, links, title }: {
             <p className="text-sm text-muted-foreground text-center py-8">No files or links to preview</p>
           ) : (
             <div className="space-y-6">
-              {/* Categorized grid */}
-              {renderCategorySection("Gallery", <ImageIcon className="h-3.5 w-3.5" />, images)}
-              {renderCategorySection("Videos", <Video className="h-3.5 w-3.5" />, videos)}
-              {renderCategorySection("Documents", <FileText className="h-3.5 w-3.5" />, documents)}
-              {renderCategorySection("Audio", <Music className="h-3.5 w-3.5" />, audio)}
-              {renderCategorySection("Downloads", <Download className="h-3.5 w-3.5" />, downloads)}
+              {renderCat("Gallery", <ImageIcon className="h-3.5 w-3.5" />, images)}
+              {renderCat("Videos", <Film className="h-3.5 w-3.5" />, videos)}
+              {renderCat("Documents", <FileText className="h-3.5 w-3.5" />, documents)}
+              {renderCat("Audio", <Music className="h-3.5 w-3.5" />, audio)}
+              {renderCat("Downloads", <Download className="h-3.5 w-3.5" />, downloads)}
 
-              {/* Links Section */}
+              {/* Links */}
               {links && links.length > 0 && (
                 <div>
                   <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1 uppercase tracking-wide">
@@ -673,18 +664,13 @@ function FilePreviewDialog({ open, onOpenChange, files, links, title }: {
                   </h4>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                     {links.map((l) => (
-                      <a
-                        key={l.id || l.url}
-                        href={l.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="border rounded-lg overflow-hidden group hover:border-primary transition-colors bg-card"
-                      >
+                      <a key={l.id || l.url} href={l.url} target="_blank" rel="noopener noreferrer"
+                        className="border rounded-lg overflow-hidden group hover:border-primary transition-colors bg-card">
                         <div className="aspect-square flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950 dark:to-indigo-900">
                           <Globe className="h-10 w-10 text-blue-400/60" />
                         </div>
                         <div className="p-2">
-                          <p className="text-[10px] font-medium truncate group-hover:text-primary transition-colors">{l.title}</p>
+                          <p className="text-[10px] font-medium truncate group-hover:text-primary">{l.title}</p>
                           <p className="text-[8px] text-muted-foreground truncate">{l.url}</p>
                           {l.description && <p className="text-[8px] text-muted-foreground/70 mt-0.5 line-clamp-2">{l.description}</p>}
                         </div>
