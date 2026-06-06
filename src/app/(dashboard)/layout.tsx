@@ -24,7 +24,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
-  KanbanSquare,
   File,
   FileText,
   FolderKanban,
@@ -48,7 +47,7 @@ import { useEffect, useState } from "react";
 const navItems: { href: string; label: string; icon: typeof LayoutDashboard; moduleId: ModuleId }[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, moduleId: "dashboard" },
   { href: "/leads", label: "Leads", icon: Users, moduleId: "leads" },
-  { href: "/pipeline", label: "Pipeline", icon: KanbanSquare, moduleId: "pipeline" },
+  // Pipeline removed — commented out in pipeline/page.tsx for later revival
   { href: "/projects", label: "Projects", icon: FolderKanban, moduleId: "projects" },
   { href: "/time-tracker", label: "Time Tracker", icon: Clock, moduleId: "time_tracker" },
   { href: "/meetings", label: "Meetings", icon: Calendar, moduleId: "meetings" },
