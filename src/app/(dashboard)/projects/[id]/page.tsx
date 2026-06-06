@@ -138,7 +138,11 @@ type TabId = (typeof TABS)[number]["id"];
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default function ProjectDetailPage() {
+export default function ProjectDetailPage({
+  searchParams,
+}: {
+  searchParams?: { tab?: string };
+}) {
   const params = useParams();
   const router = useRouter();
   const { activeWorkspace } = useWorkspace();
@@ -155,17 +159,10 @@ export default function ProjectDetailPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   // Tab — persisted via URL search param
-  const [activeTab, setActiveTab] = useState<TabId>("overview");
-  // Default tab (from URL) — set after hydration, triggers Tabs remount via key
-  const [defaultTab, setDefaultTab] = useState<TabId | null>(null);
-  const [tabKey, setTabKey] = useState(0);
-  useEffect(() => {
-    const p = new URLSearchParams(window.location.search).get("tab");
-    const t = p && TABS.some(x => x.id === p) ? (p as TabId) : "overview";
-    setDefaultTab(t);
-    setActiveTab(t);
-    setTabKey(k => k + 1);
-  }, []);
+  // Read initial tab from searchParams prop (reliable — available during SSR)
+  const urlTab = searchParams?.tab;
+  const initialTab: TabId = urlTab && TABS.some(t => t.id === urlTab) ? urlTab as TabId : "overview";
+  const [activeTab, setActiveTab] = useState<TabId>(initialTab);
 
   // Task data
   const [tasks, setTasks] = useState<ProjectTask[]>([]);
@@ -727,7 +724,7 @@ export default function ProjectDetailPage() {
         <ProjectHeader project={project} onEdit={startEditing} onDelete={() => setShowDeleteDialog(true)} />
 
         {/* ─── Tabs ─── */}
-        <Tabs key={tabKey} defaultValue={defaultTab || activeTab} onValueChange={(v) => { setActiveTab(v as TabId); router.replace(`/projects/${projectId}?tab=${v}`, { scroll: false }); }}
+        <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as TabId); router.replace(`/projects/${projectId}?tab=${v}`, { scroll: false }); }}
           className="rounded-lg border border-border bg-card p-1"
         >
           <TabsList className="w-full justify-start bg-transparent gap-0 h-auto">

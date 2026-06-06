@@ -96,21 +96,21 @@ const CalendarConnection = dynamic(() => import("@/components/settings/calendar-
 
 type Tab = "profile" | "workspace" | "members" | "preferences" | "integrations" | "client-portal";
 
-export default function SettingsPage() {
+export default function SettingsPage({
+  searchParams,
+}: {
+  searchParams?: { tab?: string };
+}) {
   const { user, activeWorkspace, workspaces, switchWorkspace, refreshWorkspaces } = useWorkspace();
   const { firebaseUser } = useAuth();
   const router = useRouter();
-  const VALID_SETTINGS_TABS = ["profile","workspace","members","preferences","integrations","client-portal"];
-  const [activeTab, setActiveTab] = useState<Tab>("profile");
-  // Sync tab from URL after hydration; fallback to localStorage hint
+  const VALID_SETTINGS_TABS: Tab[] = ["profile","workspace","members","preferences","integrations","client-portal"];
+  // Read initial tab from searchParams prop (reliable)
+  const urlTab = searchParams?.tab as Tab | undefined;
+  const initialTab: Tab = urlTab && VALID_SETTINGS_TABS.includes(urlTab) ? urlTab : "profile";
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
+  // Legacy: navigated from sidebar user profile click
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const tabParam = params.get("tab") as Tab | null;
-    if (tabParam && VALID_SETTINGS_TABS.includes(tabParam)) {
-      setActiveTab(tabParam);
-      return;
-    }
-    // Fallback: navigated from sidebar user profile click (legacy)
     const saved = localStorage.getItem("leadflow_settings_tab");
     if (saved === "profile") {
       localStorage.removeItem("leadflow_settings_tab");
