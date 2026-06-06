@@ -57,9 +57,13 @@ export async function POST(req: NextRequest) {
       const base64 = `data:${file.type};base64,${buffer.toString("base64")}`;
 
       const folder = `${getWorkspaceFolder(ctx.workspaceId)}/deliverables`;
+      // Use "image" resource type for everything (PDFs, docs, etc.) so Cloudinary
+      // serves them without X-Frame-Options restrictions. Videos use "video" type.
+      // Cloudinary can serve PDFs as images and they become embeddable in iframes.
+      const resourceType = file.type.startsWith("video/") ? "video" : "image";
       const result = await cloudinary.uploader.upload(base64, {
         folder,
-        resource_type: "auto",
+        resource_type: resourceType,
         use_filename: true,
         unique_filename: true,
         overwrite: false,
