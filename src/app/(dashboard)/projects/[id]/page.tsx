@@ -138,11 +138,7 @@ type TabId = (typeof TABS)[number]["id"];
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-export default function ProjectDetailPage({
-  searchParams,
-}: {
-  searchParams?: { tab?: string };
-}) {
+export default function ProjectDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { activeWorkspace } = useWorkspace();
@@ -159,10 +155,15 @@ export default function ProjectDetailPage({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   // Tab — persisted via URL search param
-  // Read initial tab from searchParams prop (reliable — available during SSR)
-  const urlTab = searchParams?.tab;
-  const initialTab: TabId = urlTab && TABS.some(t => t.id === urlTab) ? urlTab as TabId : "overview";
-  const [activeTab, setActiveTab] = useState<TabId>(initialTab);
+  const [activeTab, setActiveTab] = useState<TabId>("overview");
+  const [tabReady, setTabReady] = useState(false);
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search).get("tab");
+    if (p && TABS.some(t => t.id === p)) {
+      setActiveTab(p as TabId);
+    }
+    setTabReady(true);
+  }, []);
 
   // Task data
   const [tasks, setTasks] = useState<ProjectTask[]>([]);
@@ -724,19 +725,21 @@ export default function ProjectDetailPage({
         <ProjectHeader project={project} onEdit={startEditing} onDelete={() => setShowDeleteDialog(true)} />
 
         {/* ─── Tabs ─── */}
-        <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as TabId); router.replace(`/projects/${projectId}?tab=${v}`, { scroll: false }); }}
-          className="rounded-lg border border-border bg-card p-1"
-        >
-          <TabsList className="w-full justify-start bg-transparent gap-0 h-auto">
-            {TABS.map((tab) => (
-              <TabsTrigger key={tab.id} value={tab.id}
-                className="data-[state=active]:bg-muted data-[state=active]:text-foreground text-muted-foreground rounded-md px-3 py-1.5 text-sm font-medium"
-              >
-                {tab.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+        {tabReady && (
+          <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as TabId); router.replace(`/projects/${projectId}?tab=${v}`, { scroll: false }); }}
+            className="rounded-lg border border-border bg-card p-1"
+          >
+            <TabsList className="w-full justify-start bg-transparent gap-0 h-auto">
+              {TABS.map((tab) => (
+                <TabsTrigger key={tab.id} value={tab.id}
+                  className="data-[state=active]:bg-muted data-[state=active]:text-foreground text-muted-foreground rounded-md px-3 py-1.5 text-sm font-medium"
+                >
+                  {tab.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        )}
 
         {/* ═══ TAB CONTENT ═════════════════════════════════════════════════ */}
 
