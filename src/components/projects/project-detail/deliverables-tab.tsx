@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import type { Deliverable, DeliverableFileAttachment, ImageMarkup } from "@/types";
+import type { Deliverable, DeliverableFileAttachment, ImageMarkup, DeliverableVersion, LinkData } from "@/types";
+import { getFileCategory, FILE_CATEGORY_MAP } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
@@ -9,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/lib/toast";
 import { formatFileSize } from "@/lib/documents";
-import { MAX_FILE_SIZE, ALLOWED_FILE_TYPES } from "@/lib/cloudinary-config";
+import { ALLOWED_FILE_TYPES } from "@/lib/cloudinary-config";
 import { getApiAuthHeaders } from "@/lib/api/client";
 import { cn } from "@/lib/utils";
 import {
@@ -17,7 +18,9 @@ import {
   createDeliverable,
   addDeliverableVersion,
   approveVersion,
+  resetApproval,
   requestRevision,
+  submitClientFeedback,
   addComment,
   addReply,
   deliverFinalPackage,
@@ -26,6 +29,7 @@ import {
   submitPaymentProof,
   approvePaymentProof,
   rejectPaymentProof,
+  markVersionAsRead,
 } from "@/lib/firebase/project-deliverables";
 import {
   Upload,
@@ -53,6 +57,11 @@ import {
   Unlock,
   GripVertical,
   Link,
+  Music,
+  Film,
+  FileArchive,
+  Globe,
+  ExternalLink,
 } from "lucide-react";
 import {
   Dialog,
@@ -62,7 +71,13 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { Timestamp } from "firebase/firestore";
+import ImagePDFViewerModal from "@/components/projects/deliverables/ImagePDFViewerModal";
+import VideoViewerModal from "@/components/projects/deliverables/VideoViewerModal";
+import RevisionRequestModal from "@/components/projects/deliverables/RevisionRequestModal";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -90,36 +105,166 @@ function tsNow(): Timestamp {
   return Timestamp.now();
 }
 
-// ─── Create Deliverable Modal ────────────────────────────────────────────────
+// ─── Create Deliverable Modal (GigBase-style with full settings) ────────────
 
 function CreateDeliverableModal({
   open, onOpenChange, onSave, saving,
 }: {
-  open: boolean; onOpenChange: (o: boolean) => void; onSave: (d: { title: string; description: string }) => void; saving: boolean;
+  open: boolean; onOpenChange: (o: boolean) => void; onSave: (d: {
+    title: string; description: string;
+    deliverableType: "document" | "design" | "code" | "media" | "other";
+    invoiceSettings: { requirePaymentToView: boolean; requirePaymentToDownload: boolean };
+    revisionSettings: {
+      limitFreeRevisions: boolean; maxFreeRevisions: number;
+      addExtraRevisionUpsell: boolean; extraRevisionPrice: number;
+      limitRevisionPeriod: boolean; revisionTimeLimit: number; revisionTimeLimitUnit: "days" | "weeks" | "months";
+    };
+    clientVisible: boolean;
+  }) => void; saving: boolean;
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  useEffect(() => { if (open) { setTitle(""); setDescription(""); } }, [open]);
+  const [deliverableType, setDeliverableType] = useState<"document" | "design" | "code" | "media" | "other">("design");
+  const [requirePaymentToView, setRequirePaymentToView] = useState(false);
+  const [requirePaymentToDownload, setRequirePaymentToDownload] = useState(false);
+  const [limitFreeRevisions, setLimitFreeRevisions] = useState(false);
+  const [maxFreeRevisions, setMaxFreeRevisions] = useState(3);
+  const [addExtraRevisionUpsell, setAddExtraRevisionUpsell] = useState(false);
+  const [extraRevisionPrice, setExtraRevisionPrice] = useState(0);
+  const [limitRevisionPeriod, setLimitRevisionPeriod] = useState(false);
+  const [revisionTimeLimit, setRevisionTimeLimit] = useState(7);
+  const [revisionTimeLimitUnit, setRevisionTimeLimitUnit] = useState<"days" | "weeks" | "months">("days");
+  const [clientVisible, setClientVisible] = useState(true);
+
+  useEffect(() => {
+    if (open) {
+      setTitle(""); setDescription("");
+      setDeliverableType("design");
+      setRequirePaymentToView(false); setRequirePaymentToDownload(false);
+      setLimitFreeRevisions(false); setMaxFreeRevisions(3);
+      setAddExtraRevisionUpsell(false); setExtraRevisionPrice(0);
+      setLimitRevisionPeriod(false); setRevisionTimeLimit(7);
+      setRevisionTimeLimitUnit("days"); setClientVisible(true);
+    }
+  }, [open]);
+
   const handleSubmit = () => {
     if (!title.trim()) { toast.error("Deliverable title is required"); return; }
-    onSave({ title: title.trim(), description: description.trim() });
+    onSave({
+      title: title.trim(),
+      description: description.trim(),
+      deliverableType,
+      invoiceSettings: { requirePaymentToView, requirePaymentToDownload },
+      revisionSettings: {
+        limitFreeRevisions, maxFreeRevisions,
+        addExtraRevisionUpsell, extraRevisionPrice,
+        limitRevisionPeriod, revisionTimeLimit, revisionTimeLimitUnit,
+      },
+      clientVisible,
+    });
   };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create Deliverable</DialogTitle>
-          <DialogDescription>Create a new deliverable to share with your client.</DialogDescription>
+          <DialogDescription>Configure your deliverable with type, payment, and revision settings.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
+          {/* Basic Info */}
           <div className="space-y-2">
             <Label htmlFor="del-title">Title <span className="text-destructive">*</span></Label>
-            <Input id="del-title" placeholder="e.g., Logo Design" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus
-              onKeyDown={(e) => { if (e.key === "Enter") handleSubmit(); }} />
+            <Input id="del-title" placeholder="e.g., Logo Design" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
           </div>
           <div className="space-y-2">
             <Label htmlFor="del-desc">Description</Label>
             <Textarea id="del-desc" placeholder="Brief description of this deliverable" value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
+          </div>
+
+          {/* Deliverable Type */}
+          <div className="space-y-2">
+            <Label>Deliverable Type</Label>
+            <Select value={deliverableType} onValueChange={(v: "document" | "design" | "code" | "media" | "other") => setDeliverableType(v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="design">Design</SelectItem>
+                <SelectItem value="document">Document</SelectItem>
+                <SelectItem value="code">Code</SelectItem>
+                <SelectItem value="media">Media</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Separator />
+
+          {/* Invoice Settings */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium">Invoice & Access</h4>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs cursor-pointer">Require Payment to View</Label>
+              <Switch checked={requirePaymentToView} onCheckedChange={setRequirePaymentToView} />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs cursor-pointer">Require Payment to Download</Label>
+              <Switch checked={requirePaymentToDownload} onCheckedChange={setRequirePaymentToDownload} />
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Revision Settings */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium">Revision Settings</h4>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs cursor-pointer">Limit Free Revisions</Label>
+              <Switch checked={limitFreeRevisions} onCheckedChange={setLimitFreeRevisions} />
+            </div>
+            {limitFreeRevisions && (
+              <div className="flex items-center gap-2">
+                <Label className="text-xs">Max Free:</Label>
+                <Input type="number" value={maxFreeRevisions} onChange={(e) => setMaxFreeRevisions(Number(e.target.value))}
+                  className="w-20 h-7 text-xs" min={0} max={20} />
+              </div>
+            )}
+            <div className="flex items-center justify-between">
+              <Label className="text-xs cursor-pointer">Add Extra Revision Upsell</Label>
+              <Switch checked={addExtraRevisionUpsell} onCheckedChange={setAddExtraRevisionUpsell} />
+            </div>
+            {addExtraRevisionUpsell && (
+              <div className="flex items-center gap-2">
+                <Label className="text-xs">Price:</Label>
+                <Input type="number" value={extraRevisionPrice} onChange={(e) => setExtraRevisionPrice(Number(e.target.value))}
+                  className="w-24 h-7 text-xs" min={0} />
+              </div>
+            )}
+            <div className="flex items-center justify-between">
+              <Label className="text-xs cursor-pointer">Limit Revision Period</Label>
+              <Switch checked={limitRevisionPeriod} onCheckedChange={setLimitRevisionPeriod} />
+            </div>
+            {limitRevisionPeriod && (
+              <div className="flex items-center gap-2">
+                <Input type="number" value={revisionTimeLimit} onChange={(e) => setRevisionTimeLimit(Number(e.target.value))}
+                  className="w-20 h-7 text-xs" min={1} />
+                <Select value={revisionTimeLimitUnit} onValueChange={(v: "days" | "weeks" | "months") => setRevisionTimeLimitUnit(v)}>
+                  <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="days">Days</SelectItem>
+                    <SelectItem value="weeks">Weeks</SelectItem>
+                    <SelectItem value="months">Months</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+
+          <Separator />
+
+          {/* Visibility */}
+          <div className="flex items-center justify-between">
+            <Label className="text-xs cursor-pointer">Visible to Client</Label>
+            <Switch checked={clientVisible} onCheckedChange={setClientVisible} />
           </div>
         </div>
         <DialogFooter>
@@ -133,22 +278,43 @@ function CreateDeliverableModal({
   );
 }
 
-// ─── Add Version Modal ───────────────────────────────────────────────────────
+// ─── Add Version Modal (GigBase-style with categories + links) ─────────────
 
 function AddVersionModal({
   open, onOpenChange, onSave, saving,
 }: {
-  open: boolean; onOpenChange: (o: boolean) => void; onSave: (d: { files: File[]; notes: string }) => void; saving: boolean;
+  open: boolean; onOpenChange: (o: boolean) => void;
+  onSave: (d: { files: File[]; links: { title: string; url: string; description?: string }[]; notes: string }) => void;
+  saving: boolean;
 }) {
   const [files, setFiles] = useState<File[]>([]);
+  const [links, setLinks] = useState<{ title: string; url: string; description?: string }[]>([]);
   const [notes, setNotes] = useState("");
+  const [showLinkForm, setShowLinkForm] = useState(false);
+  const [linkTitle, setLinkTitle] = useState("");
+  const [linkUrl, setLinkUrl] = useState("");
+  const [linkDescription, setLinkDescription] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
-  useEffect(() => { if (!open) { setFiles([]); setNotes(""); } }, [open]);
+
+  useEffect(() => { if (!open) { setFiles([]); setLinks([]); setNotes(""); setShowLinkForm(false); } }, [open]);
+
+  // File categorization
+  const categorizedFiles = {
+    image: files.filter((f) => f.type.startsWith("image/")),
+    video: files.filter((f) => f.type.startsWith("video/")),
+    document: files.filter((f) =>
+      ["application/pdf", "text/", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml",
+       "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml",
+       "application/vnd.ms-powerpoint", "application/vnd.openxmlformats-officedocument.presentationml"
+      ].some((t) => f.type.startsWith(t) || f.type.includes(t))
+    ),
+    audio: files.filter((f) => f.type.startsWith("audio/")),
+    download: files.filter((f) => !f.type.startsWith("image/") && !f.type.startsWith("video/") && !f.type.startsWith("audio/") && !f.type.startsWith("text/") && !f.type.includes("pdf") && !f.type.includes("document") && !f.type.includes("spreadsheet") && !f.type.includes("presentation")),
+  };
 
   const handleAddFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      const valid = Array.from(e.target.files).filter((f) => ALLOWED_FILE_TYPES.includes(f.type) || f.type.startsWith("video/") || f.type.startsWith("audio/"));
-      if (valid.length !== e.target.files.length) toast.error("Some file types not allowed");
+      const valid = Array.from(e.target.files);
       setFiles((prev) => [...prev, ...valid]);
     }
     if (e.target) e.target.value = "";
@@ -156,39 +322,126 @@ function AddVersionModal({
 
   const removeFile = (index: number) => setFiles((prev) => prev.filter((_, i) => i !== index));
 
+  const addLink = () => {
+    if (!linkTitle.trim() || !linkUrl.trim()) { toast.error("Link title and URL required"); return; }
+    setLinks((prev) => [...prev, { title: linkTitle.trim(), url: linkUrl.trim(), description: linkDescription.trim() || undefined }]);
+    setLinkTitle(""); setLinkUrl(""); setLinkDescription(""); setShowLinkForm(false);
+  };
+
+  const removeLink = (index: number) => setLinks((prev) => prev.filter((_, i) => i !== index));
+
+  const FileSection = ({ title, icon, fileList }: { title: string; icon: React.ReactNode; fileList: File[] }) => {
+    if (fileList.length === 0) return null;
+    return (
+      <div>
+        <h4 className="text-[10px] font-medium text-muted-foreground uppercase mb-1 flex items-center gap-1">
+          {icon} {title} ({fileList.length})
+        </h4>
+        <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5">
+          {fileList.map((f, i) => {
+            const isImage = f.type.startsWith("image/");
+            return (
+              <div key={i} className="relative group border rounded-lg">
+                {isImage ? (
+                  <img src={URL.createObjectURL(f)} alt={f.name} className="w-full h-14 object-cover rounded-lg" />
+                ) : (
+                  <div className="w-full h-14 flex items-center justify-center bg-muted/30">
+                    {f.type.startsWith("video/") ? <Film className="h-5 w-5 text-muted-foreground" /> :
+                     f.type.startsWith("audio/") ? <Music className="h-5 w-5 text-muted-foreground" /> :
+                     <FileText className="h-5 w-5 text-muted-foreground" />}
+                  </div>
+                )}
+                <div className="p-1">
+                  <p className="text-[9px] truncate">{f.name}</p>
+                  <p className="text-[8px] text-muted-foreground">{formatFileSize(f.size)}</p>
+                </div>
+                <button onClick={() => removeFile(i)}
+                  className="absolute -top-1 -right-1 w-4 h-4 bg-destructive text-destructive-foreground rounded-full text-[8px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  ×
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add Version</DialogTitle>
-          <DialogDescription>Upload files for this deliverable version.</DialogDescription>
+          <DialogDescription>Upload files and add links for this deliverable version.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
+          {/* Files */}
           <div className="space-y-2">
             <Label>Files</Label>
             <div onClick={() => fileRef.current?.click()}
-              className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-foreground/30 transition-colors"
+              className="border-2 border-dashed border-border rounded-lg p-4 text-center cursor-pointer hover:border-foreground/30 transition-colors"
             >
-              <Upload className="h-6 w-6 mx-auto text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground">Click to browse or drag files here</p>
-              <p className="text-xs text-muted-foreground/60 mt-1">Files, images, video, audio (max 50MB each)</p>
-              <input ref={fileRef} type="file" multiple accept={ACCEPTED_EXTENSIONS} onChange={handleAddFiles} className="hidden" />
+              <Upload className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
+              <p className="text-xs text-muted-foreground">Click to browse or drag files here</p>
+              <p className="text-[10px] text-muted-foreground/60">All file types supported (max 100MB each)</p>
+              <input ref={fileRef} type="file" multiple onChange={handleAddFiles} className="hidden" />
             </div>
+
+            {/* Categorized files */}
             {files.length > 0 && (
-              <div className="space-y-1.5 mt-2 max-h-40 overflow-y-auto">
-                {files.map((f, i) => (
-                  <div key={i} className="flex items-center gap-2 p-2 rounded bg-muted text-sm">
-                    <File className="h-4 w-4 text-muted-foreground shrink-0" />
-                    <span className="flex-1 truncate text-foreground">{f.name}</span>
-                    <span className="text-xs text-muted-foreground">{formatFileSize(f.size)}</span>
-                    <button onClick={() => removeFile(i)} className="p-0.5 hover:bg-accent rounded text-muted-foreground">
-                      <X className="h-3.5 w-3.5" />
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                <FileSection title="Image Gallery" icon={<ImageIcon className="h-3 w-3" />} fileList={categorizedFiles.image} />
+                <FileSection title="Videos" icon={<Film className="h-3 w-3" />} fileList={categorizedFiles.video} />
+                <FileSection title="Documents" icon={<FileText className="h-3 w-3" />} fileList={categorizedFiles.document} />
+                <FileSection title="Audio Files" icon={<Music className="h-3 w-3" />} fileList={categorizedFiles.audio} />
+                <FileSection title="Downloads" icon={<FileArchive className="h-3 w-3" />} fileList={categorizedFiles.download} />
+              </div>
+            )}
+          </div>
+
+          <Separator />
+
+          {/* Links */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs">Links</Label>
+              <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => setShowLinkForm(!showLinkForm)}>
+                + Add Link
+              </Button>
+            </div>
+
+            {showLinkForm && (
+              <div className="border rounded-lg p-3 space-y-2 bg-muted/20">
+                <Input value={linkTitle} onChange={(e) => setLinkTitle(e.target.value)} placeholder="Link title" className="h-7 text-xs" autoFocus />
+                <Input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://..." className="h-7 text-xs" />
+                <Input value={linkDescription} onChange={(e) => setLinkDescription(e.target.value)} placeholder="Description (optional)" className="h-7 text-xs" />
+                <div className="flex gap-1 justify-end">
+                  <Button size="sm" onClick={addLink} className="h-7 text-xs">Add</Button>
+                  <Button size="sm" variant="ghost" onClick={() => setShowLinkForm(false)} className="h-7 text-xs">Cancel</Button>
+                </div>
+              </div>
+            )}
+
+            {links.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {links.map((l, i) => (
+                  <div key={i} className="flex items-center gap-1.5 border rounded-lg px-2 py-1.5 group bg-card">
+                    <Globe className="h-3 w-3 text-muted-foreground shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-medium truncate max-w-[120px]">{l.title}</p>
+                      <p className="text-[8px] text-muted-foreground truncate max-w-[120px]">{l.url}</p>
+                    </div>
+                    <button onClick={() => removeLink(i)}
+                      className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity">
+                      <X className="h-3 w-3" />
                     </button>
                   </div>
                 ))}
               </div>
             )}
           </div>
+
+          {/* Notes */}
           <div className="space-y-2">
             <Label>Version Notes</Label>
             <Textarea placeholder="What changed in this version?" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
@@ -196,8 +449,9 @@ function AddVersionModal({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={() => onSave({ files, notes })} disabled={saving || files.length === 0}>
-            {saving ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Uploading...</>) : `Upload Version (${files.length})`}
+          <Button onClick={() => onSave({ files, links, notes })} disabled={saving || (files.length === 0 && links.length === 0)}>
+            {saving ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Uploading...</>) :
+             `Upload Version (${files.length} files, ${links.length} links)`}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -338,124 +592,224 @@ function MarkupOverlay({ markups: _markups, imageRef: _imageRef }: { markups: Im
   );
 }
 
+
+
+// ─── Version Preview Modal (categorized grid + open-in-new-tab + download) ─
+
 function VersionPreviewModal({
-  open, onOpenChange, files, title,
+  open, onOpenChange, files, links, title,
 }: {
-  open: boolean; onOpenChange: () => void; files: DeliverableFileAttachment[]; title: string;
+  open: boolean; onOpenChange: () => void;
+  files: DeliverableFileAttachment[]; links?: LinkData[]; title: string;
 }) {
-  const [activeFile, setActiveFile] = useState<DeliverableFileAttachment | null>(files[0] || null);
+  const [activeFile, setActiveFile] = useState<DeliverableFileAttachment | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  useEffect(() => { if (open && files.length > 0) setActiveFile(files[0]); }, [open, files]);
+  useEffect(() => { if (open) setActiveFile(null); }, [open]);
 
-  const getDownloadUrl = (f: DeliverableFileAttachment) => f.cloudinaryUrl || f.filePath;
-
-  const seekTo = (seconds: number) => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = seconds;
-      videoRef.current.play();
+  const getUrl = (f: DeliverableFileAttachment) => f.cloudinaryUrl || f.filePath;
+  const getProxyUrl = (f: DeliverableFileAttachment) => {
+    const url = getUrl(f);
+    if (!url) return "";
+    if (url.includes("res.cloudinary.com")) {
+      return `/api/deliverables/proxy-file?url=${encodeURIComponent(url)}`;
     }
+    return url;
+  };
+  const formatTS = (s: number) => {
+    const m = Math.floor(s / 60); const sec = Math.floor(s % 60);
+    return `${m}:${sec.toString().padStart(2, "0")}`;
   };
 
-  const formatTS = (s: number) => {
-    const m = Math.floor(s / 60);
-    const sec = Math.floor(s % 60);
-    return `${m}:${sec.toString().padStart(2, "0")}`;
+  const images = files.filter((f) => getFileCategory(f.mimeType) === "image");
+  const videos = files.filter((f) => getFileCategory(f.mimeType) === "video");
+  const documents = files.filter((f) => getFileCategory(f.mimeType) === "document");
+  const audio = files.filter((f) => getFileCategory(f.mimeType) === "audio");
+  const downloads = files.filter((f) => getFileCategory(f.mimeType) === "download");
+
+  const renderCat = (label: string, icon: React.ReactNode, items: DeliverableFileAttachment[]) => {
+    if (!items.length) return null;
+    return (
+      <div>
+        <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1 uppercase tracking-wide">
+          {icon} {label} ({items.length})
+        </h4>
+        <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">
+          {items.map((f) => {
+            const url = getUrl(f);
+            return (
+              <div key={f.id}
+                className={`border rounded-lg overflow-hidden group hover:border-primary transition-colors relative ${
+                  activeFile?.id === f.id ? "ring-2 ring-primary border-primary" : ""}`}
+              >
+                {/* Thumbnail - click to preview */}
+                <button onClick={() => setActiveFile(f)} className="w-full text-left">
+                  {f.mimeType.startsWith("image/") && url ? (
+                    <div className="aspect-square bg-muted/10">
+                      <img src={url} alt="" className="w-full h-full object-cover" />
+                    </div>
+                  ) : f.mimeType.includes("pdf") ? (
+                    <div className="aspect-square flex items-center justify-center bg-red-50 dark:bg-red-950/30">
+                      <FileText className="h-8 w-8 text-red-400/60" />
+                    </div>
+                  ) : f.mimeType.startsWith("video/") ? (
+                    <div className="aspect-square flex items-center justify-center bg-muted/30">
+                      <Film className="h-8 w-8 text-muted-foreground/40" />
+                    </div>
+                  ) : (
+                    <div className="aspect-square flex items-center justify-center bg-muted/30">
+                      <File className="h-8 w-8 text-muted-foreground/40" />
+                    </div>
+                  )}
+                </button>
+                {/* Open in new tab button - always visible on hover */}
+                {url && (
+                  <a href={url} target="_blank" rel="noopener noreferrer"
+                    className="absolute top-1 right-1 w-5 h-5 bg-black/50 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70"
+                    title="Open in new tab"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <ExternalLink className="h-3 w-3 text-white" />
+                  </a>
+                )}
+                {/* File info */}
+                <div className="p-1">
+                  <p className="text-[9px] truncate">{f.originalName || f.fileName}</p>
+                  <p className="text-[8px] text-muted-foreground">{formatFileSize(f.fileSize)}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle className="truncate">{title}</DialogTitle></DialogHeader>
-        {files.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">No files to preview</p>
+        {files.length === 0 && (!links || links.length === 0) ? (
+          <p className="text-sm text-muted-foreground text-center py-8">No files or links to preview</p>
         ) : (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 flex-wrap">
-              {files.map((f) => {
-                const isActive = f.id === activeFile?.id;
-                return (
-                  <button key={f.id} onClick={() => setActiveFile(f)}
-                    className={cn("flex items-center gap-2 px-3 py-2 rounded-lg text-xs whitespace-nowrap border transition-colors",
-                      isActive ? "bg-muted border-border font-medium" : "border-transparent hover:bg-muted/50"
-                    )}
-                  >
-                    {f.mimeType?.startsWith("image/") ? <ImageIcon className="h-3.5 w-3.5" /> :
-                     f.mimeType?.startsWith("video/") ? <Video className="h-3.5 w-3.5" /> :
-                     <FileText className="h-3.5 w-3.5" />}
-                    {f.fileName || f.originalName}
-                  </button>
-                );
-              })}
-            </div>
-            {activeFile && (
-              <div className={cn("bg-muted/30 rounded-lg p-2 flex items-center justify-center min-h-[300px]", (activeFile.imageMarkups?.length || activeFile.videoMoments?.length) ? "relative" : "")}>
-                {(() => {
-                  const url = getDownloadUrl(activeFile);
-                  if (!url) {
-                    return (
-                      <div className="text-center py-12">
-                        <File className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
-                        <p className="text-sm text-muted-foreground mb-2">File URL not available</p>
-                        <p className="text-xs text-muted-foreground/60">The file may still be uploading or processing.</p>
-                      </div>
-                    );
-                  }
-                  if (activeFile.mimeType?.startsWith("image/")) {
-                    return (
-                      <>
-                        <img src={url} alt={activeFile.fileName} className="max-w-full max-h-[60vh] object-contain rounded" />
-                        {activeFile.imageMarkups?.length ? (
-                          <MarkupOverlay markups={activeFile.imageMarkups} />
-                        ) : null}
-                      </>
-                    );
-                  }
-                  if (activeFile.mimeType?.startsWith("video/")) {
-                    return <video ref={videoRef} controls className="w-full max-h-[60vh] rounded" src={url} />;
-                  }
-                  if (activeFile.mimeType?.includes("pdf")) {
-                    return <iframe src={url} className="w-full h-[60vh] rounded" title={activeFile.fileName} />;
-                  }
-                  return (
-                    <div className="text-center py-12">
-                      <File className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
-                      <p className="text-sm text-muted-foreground mb-2">Preview not available for this file type</p>
-                      <Button variant="outline" size="sm" asChild>
-                        <a href={url} download={activeFile.fileName} target="_blank" rel="noopener noreferrer">
-                          <Download className="h-4 w-4 mr-1.5" /> Download
-                        </a>
-                      </Button>
-                    </div>
-                  );
-                })()}
-              </div>
-            )}
+          <div className="space-y-6">
+            {renderCat("Gallery", <ImageIcon className="h-3.5 w-3.5" />, images)}
+            {renderCat("Videos", <Film className="h-3.5 w-3.5" />, videos)}
+            {renderCat("Documents", <FileText className="h-3.5 w-3.5" />, documents)}
+            {renderCat("Audio", <Music className="h-3.5 w-3.5" />, audio)}
+            {renderCat("Downloads", <Download className="h-3.5 w-3.5" />, downloads)}
 
-            {/* Video moments timeline */}
-            {activeFile?.mimeType?.startsWith("video/") && activeFile.videoMoments?.length ? (
-              <div className="space-y-1.5">
-                <p className="text-xs font-medium flex items-center gap-1"><Video className="h-3.5 w-3.5" /> Video Moments</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {activeFile.videoMoments.map((m) => (
-                    <button key={m.id} onClick={() => seekTo(m.timestamp)}
-                      className="flex items-center gap-1.5 px-2 py-1 rounded text-[10px] border border-border hover:bg-accent/50 transition-colors group">
-                      <span className="font-mono text-primary">{formatTS(m.timestamp)}</span>
-                      <span className="text-muted-foreground group-hover:text-foreground truncate max-w-[120px]">{m.comment}</span>
-                    </button>
+            {/* Links */}
+            {links && links.length > 0 && (
+              <div>
+                <h4 className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1 uppercase tracking-wide">
+                  <Link className="h-3.5 w-3.5" /> Links ({links.length})
+                </h4>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                  {links.map((l) => (
+                    <a key={l.id || l.url} href={l.url} target="_blank" rel="noopener noreferrer"
+                      className="border rounded-lg overflow-hidden group hover:border-primary transition-colors bg-card">
+                      <div className="aspect-square flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950 dark:to-indigo-900">
+                        <Globe className="h-10 w-10 text-blue-400/60" />
+                      </div>
+                      <div className="p-2">
+                        <p className="text-[10px] font-medium truncate group-hover:text-primary">{l.title}</p>
+                        <p className="text-[8px] text-muted-foreground truncate">{l.url}</p>
+                        {l.description && <p className="text-[8px] text-muted-foreground/70 mt-0.5 line-clamp-2">{l.description}</p>}
+                      </div>
+                    </a>
                   ))}
                 </div>
               </div>
-            ) : null}
+            )}
 
-            <div className="flex justify-end gap-2">
-              {activeFile && getDownloadUrl(activeFile) && (
-                <Button variant="outline" size="sm" asChild>
-                  <a href={getDownloadUrl(activeFile)} download={activeFile.fileName} target="_blank" rel="noopener noreferrer">
-                    <Download className="h-4 w-4 mr-1.5" /> Download
-                  </a>
-                </Button>
-              )}
-            </div>
+            {/* Active file preview */}
+            {activeFile && (
+              <div className="border rounded-lg p-3 bg-muted/5">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-medium truncate">{activeFile.originalName || activeFile.fileName}</p>
+                  <div className="flex gap-1 shrink-0">
+                    {getUrl(activeFile) && (
+                      <>
+                        <Button variant="outline" size="sm" className="h-7 text-xs" asChild>
+                          <a href={getUrl(activeFile)} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="h-3 w-3 mr-1" /> Open
+                          </a>
+                        </Button>
+                        <Button variant="outline" size="sm" className="h-7 text-xs" asChild>
+                          <a href={getUrl(activeFile)} download target="_blank" rel="noopener noreferrer">
+                            <Download className="h-3 w-3 mr-1" /> Save
+                          </a>
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center justify-center min-h-[200px] bg-muted/10 rounded">
+                  {(() => {
+                    const url = getUrl(activeFile);
+                    if (!url) return (
+                      <div className="text-center py-8">
+                        <File className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
+                        <p className="text-xs text-muted-foreground">File URL not available</p>
+                      </div>
+                    );
+                    // Images: inline preview works
+                    if (activeFile.mimeType?.startsWith("image/"))
+                      return <img src={url} alt="" className="max-w-full max-h-[50vh] object-contain rounded" />;
+                    // Videos: inline preview works
+                    if (activeFile.mimeType?.startsWith("video/"))
+                      return <video ref={videoRef} controls className="w-full max-h-[50vh] rounded" src={url} />;
+                    // PDFs: use proxy to bypass Cloudinary's X-Frame-Options
+                    if (activeFile.mimeType?.includes("pdf")) {
+                      return (
+                        <iframe
+                          src={getProxyUrl(activeFile)}
+                          className="w-full h-[60vh] rounded border-0"
+                          title={activeFile.fileName}
+                        />
+                      );
+                    }
+                    // Other files: show download/open prompt
+                    return (
+                      <div className="text-center py-8">
+                        <File className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
+                        <p className="text-xs text-muted-foreground mb-1">Preview not available</p>
+                        <p className="text-[10px] text-muted-foreground/60 mb-3">
+                          Open in new tab or download to view
+                        </p>
+                        <div className="flex gap-2 justify-center">
+                          <Button size="sm" variant="outline" asChild>
+                            <a href={url} target="_blank" rel="noopener noreferrer">
+                              <ExternalLink className="h-3.5 w-3.5 mr-1" /> Open in New Tab
+                            </a>
+                          </Button>
+                          <Button size="sm" variant="default" asChild>
+                            <a href={url} download target="_blank" rel="noopener noreferrer">
+                              <Download className="h-3.5 w-3.5 mr-1" /> Download
+                            </a>
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+                {/* Video moments */}
+                {activeFile?.mimeType?.startsWith("video/") && activeFile.videoMoments?.length ? (
+                  <div className="mt-2 space-y-1">
+                    <p className="text-[10px] font-medium text-muted-foreground">Moments ({activeFile.videoMoments.length})</p>
+                    <div className="flex flex-wrap gap-1">
+                      {activeFile.videoMoments.map((m) => (
+                        <button key={m.id} onClick={() => { if (videoRef.current) { videoRef.current.currentTime = m.timestamp; videoRef.current.play(); } }}
+                          className="text-[9px] px-1.5 py-0.5 rounded border border-border hover:bg-accent/50 flex items-center gap-1">
+                          <span className="font-mono text-primary">{formatTS(m.timestamp)}</span>
+                          <span className="truncate max-w-[80px]">{m.comment}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            )}
           </div>
         )}
       </DialogContent>
@@ -859,19 +1213,40 @@ function PaymentGateToggle({
   );
 }
 
-// ─── Deliverable Version Row ─────────────────────────────────────────────────
+// ─── Deliverable Version Row (GigBase-style with categorized counts) ─────────
 
 function VersionRow({
   version, deliverableId, userId, workspaceId, isOwner, onRefresh, onPreview,
+  onImageMarkup, onVideoAnnotate, onRevisionRequest,
 }: {
-  version: import("@/types").DeliverableVersion;
+  version: DeliverableVersion;
   deliverableId: string;
   workspaceId: string;
   userId: string;
   isOwner: boolean;
   onRefresh: () => void;
   onPreview: (versionId: string) => void;
+  onImageMarkup: (file: DeliverableFileAttachment) => void;
+  onVideoAnnotate: (file: DeliverableFileAttachment) => void;
+  onRevisionRequest: () => void;
 }) {
+  // Count files by category
+  const imageCount = version.files.filter((f) => getFileCategory(f.mimeType) === "image").length;
+  const videoCount = version.files.filter((f) => getFileCategory(f.mimeType) === "video").length;
+  const docCount = version.files.filter((f) => getFileCategory(f.mimeType) === "document").length;
+  const audioCount = version.files.filter((f) => getFileCategory(f.mimeType) === "audio").length;
+  const downloadCount = version.files.filter((f) => getFileCategory(f.mimeType) === "download").length;
+  const totalComments = (version.commentCount || 0) + version.files.reduce((a, f) =>
+    a + (f.videoMoments?.length || 0) + (f.imageMarkups?.length || 0), 0
+  );
+
+  const fileCategoryLabels: { count: number; icon: React.ReactNode; label: string }[] = [];
+  if (imageCount) fileCategoryLabels.push({ count: imageCount, icon: <ImageIcon className="h-3 w-3" />, label: "images" });
+  if (videoCount) fileCategoryLabels.push({ count: videoCount, icon: <Film className="h-3 w-3" />, label: "videos" });
+  if (docCount) fileCategoryLabels.push({ count: docCount, icon: <FileText className="h-3 w-3" />, label: "docs" });
+  if (audioCount) fileCategoryLabels.push({ count: audioCount, icon: <Music className="h-3 w-3" />, label: "audio" });
+  if (downloadCount) fileCategoryLabels.push({ count: downloadCount, icon: <FileArchive className="h-3 w-3" />, label: "files" });
+
   return (
     <div className="border-b border-border/50 last:border-b-0">
       <div className="flex items-center justify-between p-3 pl-10 hover:bg-accent/30 transition-colors">
@@ -885,33 +1260,81 @@ function VersionRow({
               {version.isLatest && <span className="ml-1.5 text-[10px] text-primary font-normal">(latest)</span>}
             </p>
             <p className="text-[10px] text-muted-foreground">
-              {formatDate(version.uploadedAt)} · {version.files.length} file{version.files.length !== 1 ? "s" : ""}
-              {version.links?.length > 0 && ` · ${version.links.length} link${version.links.length !== 1 ? "s" : ""}`}
+              {formatDate(version.uploadedAt)}
             </p>
+            {/* File category badges */}
+            <div className="flex flex-wrap gap-1.5 mt-0.5">
+              {fileCategoryLabels.map((cat) => (
+                <span key={cat.label} className="flex items-center gap-0.5 text-[9px] text-muted-foreground bg-muted/50 px-1 py-0.5 rounded">
+                  {cat.icon} {cat.count}
+                </span>
+              ))}
+              {version.links?.length > 0 && (
+                <span className="flex items-center gap-0.5 text-[9px] text-muted-foreground bg-muted/50 px-1 py-0.5 rounded">
+                  <Link className="h-2.5 w-2.5" /> {version.links.length}
+                </span>
+              )}
+              {totalComments > 0 && (
+                <span className="flex items-center gap-0.5 text-[9px] text-blue-500 bg-blue-50 dark:bg-blue-950 px-1 py-0.5 rounded">
+                  <MessageSquare className="h-2.5 w-2.5" /> {totalComments}
+                </span>
+              )}
+            </div>
           </div>
-          {version.notes && <p className="text-[10px] text-muted-foreground/70 italic truncate max-w-[200px] hidden md:block">{version.notes}</p>}
+          {version.notes && <p className="text-[10px] text-muted-foreground/70 italic truncate max-w-[150px] hidden lg:block">{version.notes}</p>}
         </div>
         <div className="flex items-center gap-1">
-          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${version.status === "approved" ? "bg-success/10 text-success" : version.status === "revision_requested" ? "bg-warning/10 text-warning" : "bg-muted text-muted-foreground"}`}>
-            {version.status}
+          <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+            version.status === "approved" ? "bg-success/10 text-success" :
+            version.status === "revision_requested" ? "bg-warning/10 text-warning" :
+            "bg-muted text-muted-foreground"
+          }`}>
+            {version.status === "approved" ? "Approved" :
+             version.status === "revision_requested" ? "Changes Requested" :
+             version.status === "submitted" ? "Submitted" : version.status}
           </span>
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onPreview(version.id)} title="Preview">
             <Eye className="h-3.5 w-3.5" />
           </Button>
+          {/* Revision requested badge for owner */}
           {isOwner && version.status === "revision_requested" && (
-            <span className="text-[10px] text-warning font-medium px-1.5 py-0.5 rounded-full bg-warning/10">Revision requested</span>
+            <Button variant="ghost" size="sm" className="h-7 text-[10px] text-warning" onClick={onRevisionRequest}>
+              <RefreshCw className="h-3 w-3 mr-1" /> View Request
+            </Button>
           )}
         </div>
       </div>
-      {/* Video Moments & Markups for all files in this version */}
-      {version.files.some((f) => f.videoMoments?.length > 0 || f.imageMarkups?.length > 0) && (
-        <div className="px-10 pb-3 space-y-2">
-          {version.files.filter((f) => f.videoMoments?.length > 0).map((f) => (
-            <VideoMomentsPanel key={f.id} deliverableId={deliverableId} versionId={version.id} file={f} userId={userId} workspaceId={workspaceId} />
-          ))}
-          {version.files.filter((f) => f.imageMarkups?.length > 0).map((f) => (
-            <ImageMarkupsSection key={f.id} file={f} />
-          ))}
+      {/* File thumbnails row */}
+      {version.files.length > 0 && (
+        <div className="px-10 pb-3">
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {version.files.slice(0, 8).map((f) => (
+              <button
+                key={f.id}
+                className="w-14 h-14 rounded border border-border overflow-hidden flex-shrink-0 relative group hover:border-primary transition-colors"
+                onClick={() => onPreview(version.id)}
+                title={f.originalName || f.fileName}
+              >
+                {f.mimeType.startsWith("image/") && (f.cloudinaryUrl || f.filePath) ? (
+                  <img src={f.cloudinaryUrl || f.filePath} alt="" className="w-full h-full object-cover" />
+                ) : f.mimeType.startsWith("video/") ? (
+                  <div className="w-full h-full flex items-center justify-center bg-muted/30"><Film className="h-5 w-5 text-muted-foreground" /></div>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-muted/30"><FileText className="h-5 w-5 text-muted-foreground" /></div>
+                )}
+                {(f.videoMoments?.length || f.imageMarkups?.length) ? (
+                  <div className="absolute top-0 right-0 bg-blue-500 text-white text-[7px] w-3.5 h-3.5 flex items-center justify-center rounded-bl">
+                    {(f.videoMoments?.length || 0) + (f.imageMarkups?.length || 0)}
+                  </div>
+                ) : null}
+              </button>
+            ))}
+            {version.files.length > 8 && (
+              <div className="w-14 h-14 rounded border border-border flex items-center justify-center text-[10px] text-muted-foreground bg-muted/20 flex-shrink-0">
+                +{version.files.length - 8}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -940,7 +1363,14 @@ export default function DeliverablesTab({ projectId, workspaceId, userId, onProj
   const [savingVersion, setSavingVersion] = useState(false);
   const [delivering, setDelivering] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState<string | null>(null);
-  const [videoMomentOpen, setVideoMomentOpen] = useState<string | null>(null);
+  // Image/PDF markup modal state
+  const [markupFile, setMarkupFile] = useState<{ deliverableId: string; versionId: string; file: DeliverableFileAttachment } | null>(null);
+  // Video annotation modal state
+  const [videoFile, setVideoFile] = useState<{ deliverableId: string; versionId: string; file: DeliverableFileAttachment } | null>(null);
+  // Revision request modal state
+  const [revisionRequest, setRevisionRequest] = useState<{ deliverableId: string; version: DeliverableVersion } | null>(null);
+  // Review modal state (approve/revision for owner to process client feedback)
+  const [reviewModal, setReviewModal] = useState<{ deliverableId: string; versionId: string; action: "approve" | "revision" } | null>(null);
 
   const isOwner = true; // TODO: derive from user role / permissions
 
@@ -954,11 +1384,31 @@ export default function DeliverablesTab({ projectId, workspaceId, userId, onProj
 
   useEffect(() => { loadDeliverables(); }, [loadDeliverables]);
 
+  // Auto-expand deliverables that have versions
+  useEffect(() => {
+    if (!loading && deliverables.length > 0 && expandedDeliverables.size === 0) {
+      const withVersions = deliverables.filter(d => d.versions.length > 0).map(d => d.id);
+      if (withVersions.length > 0) {
+        setExpandedDeliverables(new Set(withVersions));
+      }
+    }
+  }, [loading, deliverables]);
+
   const toggleExpanded = (id: string) => {
     setExpandedDeliverables((prev) => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
   };
 
-  const handleCreateDeliverable = async (data: { title: string; description: string }) => {
+  const handleCreateDeliverable = async (data: {
+    title: string; description: string;
+    deliverableType: "document" | "design" | "code" | "media" | "other";
+    invoiceSettings: { requirePaymentToView: boolean; requirePaymentToDownload: boolean };
+    revisionSettings: {
+      limitFreeRevisions: boolean; maxFreeRevisions: number;
+      addExtraRevisionUpsell: boolean; extraRevisionPrice: number;
+      limitRevisionPeriod: boolean; revisionTimeLimit: number; revisionTimeLimitUnit: "days" | "weeks" | "months";
+    };
+    clientVisible: boolean;
+  }) => {
     setSaving(true);
     try {
       await createDeliverable(workspaceId, projectId, userId, data);
@@ -969,10 +1419,10 @@ export default function DeliverablesTab({ projectId, workspaceId, userId, onProj
     finally { setSaving(false); }
   };
 
-  const handleAddVersion = async (deliverableId: string, data: { files: File[]; notes: string }) => {
+  const handleAddVersion = async (deliverableId: string, data: { files: File[]; links: { title: string; url: string; description?: string }[]; notes: string }) => {
     setSavingVersion(true);
     try {
-      // Upload files first, then create version record
+      // Upload files first
       const uploadedFiles: DeliverableFileAttachment[] = [];
       for (const file of data.files) {
         const formData = new FormData();
@@ -980,7 +1430,7 @@ export default function DeliverablesTab({ projectId, workspaceId, userId, onProj
         formData.append("projectId", projectId);
         formData.append("workspaceId", workspaceId);
         const headers = await getApiAuthHeaders(workspaceId);
-        const res = await fetch("/api/documents/upload", {
+        const res = await fetch("/api/deliverables/upload-file", {
           method: "POST", headers: { ...headers, "x-workspace-id": workspaceId }, body: formData,
         });
         if (!res.ok) throw new Error(`Upload failed for ${file.name}`);
@@ -991,6 +1441,7 @@ export default function DeliverablesTab({ projectId, workspaceId, userId, onProj
           fileName: doc.fileName || file.name,
           originalName: file.name,
           filePath: doc.url || doc.cloudinaryUrl || doc.filePath || "",
+          cloudinaryUrl: doc.url || "",
           fileSize: file.size,
           mimeType: file.type,
           uploadedAt: now,
@@ -998,20 +1449,47 @@ export default function DeliverablesTab({ projectId, workspaceId, userId, onProj
           downloadCount: 0,
           videoMoments: [],
           imageMarkups: [],
+          thumbnail: doc.mimeType?.startsWith("image/") ? doc.url : undefined,
         });
       }
-      await addDeliverableVersion(deliverableId, userId, { files: uploadedFiles, notes: data.notes, links: [] });
+      // Convert links to LinkData format
+      const links = data.links.map((l) => ({
+        id: `l-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        title: l.title,
+        url: l.url,
+        description: l.description,
+        createdAt: tsNow(),
+      }));
+      await addDeliverableVersion(deliverableId, userId, { files: uploadedFiles, notes: data.notes, links, commentCount: 0 });
       toast.success("Version uploaded");
       setShowAddVersion(null);
       loadDeliverables();
-    } catch (e) { toast.error("Failed to upload version"); }
+    } catch (e) {
+      console.error("Version upload error:", e);
+      toast.error("Failed to upload version");
+    }
     finally { setSavingVersion(false); }
+  };
+
+  const handleApproveVersion = async (deliverableId: string, versionId: string, comments?: string) => {
+    try {
+      await approveVersion(deliverableId, versionId, userId, comments);
+      toast.success("Version approved");
+      loadDeliverables();
+    } catch { toast.error("Failed to approve version"); }
+  };
+
+  const handleResetApproval = async (deliverableId: string, versionId: string) => {
+    try {
+      await resetApproval(deliverableId, versionId);
+      toast.success("Approval reset — client can review again");
+      loadDeliverables();
+    } catch { toast.error("Failed to reset approval"); }
   };
 
   const handleDeliverFinalPackage = async () => {
     setDelivering(true);
     try {
-      // Mark all deliverables as delivered
       for (const del of deliverables) {
         await deliverFinalPackage(del.id, userId);
       }
@@ -1039,7 +1517,27 @@ export default function DeliverablesTab({ projectId, workspaceId, userId, onProj
     return `${del.title} - Version ${v?.versionNumber || "?"}`;
   };
 
+  const getPreviewVersion = (): DeliverableVersion | null => {
+    if (!showVersionPreview) return null;
+    const del = deliverables.find((d) => d.id === showVersionPreview.deliverableId);
+    if (!del) return null;
+    return del.versions.find((v) => v.id === showVersionPreview.versionId) || null;
+  };
+
+  const getPreviewDeliverableId = (): string | null => {
+    return showVersionPreview?.deliverableId || null;
+  };
+
+  const getPreviewLinks = (): LinkData[] => {
+    if (!showVersionPreview) return [];
+    const del = deliverables.find((d) => d.id === showVersionPreview.deliverableId);
+    if (!del) return [];
+    const v = del.versions.find((v) => v.id === showVersionPreview.versionId);
+    return v?.links || [];
+  };
+
   const totalFiles = deliverables.reduce((acc, d) => acc + d.versions.reduce((vAcc, v) => vAcc + v.files.length, 0), 0);
+  const totalLinks = deliverables.reduce((acc, d) => acc + d.versions.reduce((vAcc, v) => vAcc + (v.links?.length || 0), 0), 0);
   const approvedCount = deliverables.filter((d) => d.status === "approved" || d.status === "delivered").length;
   const allFinalPackageDelivered = deliverables.length > 0 && deliverables.every((d) => d.finalPackageDelivered);
 
@@ -1157,7 +1655,12 @@ export default function DeliverablesTab({ projectId, workspaceId, userId, onProj
                     {del.versions.map((version) => (
                       <VersionRow key={version.id} version={version} deliverableId={del.id}
                         workspaceId={workspaceId} userId={userId} isOwner={isOwner}
-                        onRefresh={loadDeliverables} onPreview={(vid) => setShowVersionPreview({ deliverableId: del.id, versionId: vid })} />
+                        onRefresh={loadDeliverables}
+                        onPreview={(vid) => setShowVersionPreview({ deliverableId: del.id, versionId: vid })}
+                        onImageMarkup={(file) => setMarkupFile({ deliverableId: del.id, versionId: version.id, file })}
+                        onVideoAnnotate={(file) => setVideoFile({ deliverableId: del.id, versionId: version.id, file })}
+                        onRevisionRequest={() => setRevisionRequest({ deliverableId: del.id, version })}
+                      />
                     ))}
                     {/* Add Version button */}
                     <button onClick={() => setShowAddVersion(del.id)}
@@ -1174,10 +1677,11 @@ export default function DeliverablesTab({ projectId, workspaceId, userId, onProj
 
       {/* ─── Progress Summary ─── */}
       {deliverables.length > 0 && (
-        <div className="flex items-center gap-3 text-xs text-muted-foreground px-1">
+        <div className="flex items-center gap-3 text-xs text-muted-foreground px-1 flex-wrap">
           <span>{deliverables.length} deliverable{deliverables.length !== 1 ? "s" : ""}</span>
           <span className="text-muted-foreground/30">|</span>
           <span>{totalFiles} file{totalFiles !== 1 ? "s" : ""}</span>
+          {totalLinks > 0 && <><span className="text-muted-foreground/30">|</span><span>{totalLinks} link{totalLinks !== 1 ? "s" : ""}</span></>}
           <span className="text-muted-foreground/30">|</span>
           <span>{approvedCount} approved</span>
         </div>
@@ -1186,7 +1690,56 @@ export default function DeliverablesTab({ projectId, workspaceId, userId, onProj
       {/* ─── Modals ─── */}
       <CreateDeliverableModal open={showCreate} onOpenChange={setShowCreate} onSave={handleCreateDeliverable} saving={saving} />
       <AddVersionModal open={!!showAddVersion} onOpenChange={(open) => { if (!open) setShowAddVersion(null); }} onSave={(data) => { if (showAddVersion) handleAddVersion(showAddVersion, data); }} saving={savingVersion} />
-      <VersionPreviewModal open={!!showVersionPreview} onOpenChange={() => setShowVersionPreview(null)} files={getPreviewFiles()} title={getPreviewTitle()} />
+      <VersionPreviewModal
+        open={!!showVersionPreview}
+        onOpenChange={() => setShowVersionPreview(null)}
+        files={getPreviewFiles()}
+        links={getPreviewLinks()}
+        title={getPreviewTitle()}
+      />
+
+      {/* Image/PDF Markup Modal */}
+      {markupFile && (
+        <ImagePDFViewerModal
+          open={!!markupFile}
+          onOpenChange={() => { setMarkupFile(null); loadDeliverables(); }}
+          file={markupFile.file}
+          deliverableId={markupFile.deliverableId}
+          versionId={markupFile.versionId}
+          userId={userId}
+          isClient={false}
+        />
+      )}
+
+      {/* Video Annotation Modal */}
+      {videoFile && (
+        <VideoViewerModal
+          open={!!videoFile}
+          onOpenChange={() => { setVideoFile(null); loadDeliverables(); }}
+          file={videoFile.file}
+          deliverableId={videoFile.deliverableId}
+          versionId={videoFile.versionId}
+          userId={userId}
+          isClient={false}
+        />
+      )}
+
+      {/* Revision Request Modal (view client feedback) */}
+      {revisionRequest && (
+        <RevisionRequestModal
+          open={!!revisionRequest}
+          onOpenChange={() => setRevisionRequest(null)}
+          deliverableId={revisionRequest.deliverableId}
+          version={revisionRequest.version}
+          userId={userId}
+          readOnly={isOwner}
+          existingRevision={{
+            reason: revisionRequest.version.notes || "Client requested changes",
+            comments: [],
+          }}
+        />
+      )}
+
       <DeliverFinalPackageModal open={showDeliverModal} onOpenChange={setShowDeliverModal} onConfirm={handleDeliverFinalPackage} saving={delivering} deliverableCount={deliverables.length} />
     </div>
   );
