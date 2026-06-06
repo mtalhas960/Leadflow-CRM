@@ -594,7 +594,7 @@ function MarkupOverlay({ markups: _markups, imageRef: _imageRef }: { markups: Im
 
 
 
-// ─── Version Preview Modal (simple: categorized grid + inline previews) ─────
+// ─── Version Preview Modal (categorized grid + open-in-new-tab + download) ─
 
 function VersionPreviewModal({
   open, onOpenChange, files, links, title,
@@ -612,7 +612,6 @@ function VersionPreviewModal({
     return `${m}:${sec.toString().padStart(2, "0")}`;
   };
 
-  // Categorize
   const images = files.filter((f) => getFileCategory(f.mimeType) === "image");
   const videos = files.filter((f) => getFileCategory(f.mimeType) === "video");
   const documents = files.filter((f) => getFileCategory(f.mimeType) === "document");
@@ -627,34 +626,51 @@ function VersionPreviewModal({
           {icon} {label} ({items.length})
         </h4>
         <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">
-          {items.map((f) => (
-            <button key={f.id} onClick={() => setActiveFile(f)}
-              className={`border rounded-lg overflow-hidden group hover:border-primary transition-colors ${
-                activeFile?.id === f.id ? "ring-2 ring-primary border-primary" : ""}`}
-            >
-              {f.mimeType.startsWith("image/") && getUrl(f) ? (
-                <div className="aspect-square bg-muted/10">
-                  <img src={getUrl(f)} alt="" className="w-full h-full object-cover" />
+          {items.map((f) => {
+            const url = getUrl(f);
+            return (
+              <div key={f.id}
+                className={`border rounded-lg overflow-hidden group hover:border-primary transition-colors relative ${
+                  activeFile?.id === f.id ? "ring-2 ring-primary border-primary" : ""}`}
+              >
+                {/* Thumbnail - click to preview */}
+                <button onClick={() => setActiveFile(f)} className="w-full text-left">
+                  {f.mimeType.startsWith("image/") && url ? (
+                    <div className="aspect-square bg-muted/10">
+                      <img src={url} alt="" className="w-full h-full object-cover" />
+                    </div>
+                  ) : f.mimeType.includes("pdf") ? (
+                    <div className="aspect-square flex items-center justify-center bg-red-50 dark:bg-red-950/30">
+                      <FileText className="h-8 w-8 text-red-400/60" />
+                    </div>
+                  ) : f.mimeType.startsWith("video/") ? (
+                    <div className="aspect-square flex items-center justify-center bg-muted/30">
+                      <Film className="h-8 w-8 text-muted-foreground/40" />
+                    </div>
+                  ) : (
+                    <div className="aspect-square flex items-center justify-center bg-muted/30">
+                      <File className="h-8 w-8 text-muted-foreground/40" />
+                    </div>
+                  )}
+                </button>
+                {/* Open in new tab button - always visible on hover */}
+                {url && (
+                  <a href={url} target="_blank" rel="noopener noreferrer"
+                    className="absolute top-1 right-1 w-5 h-5 bg-black/50 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70"
+                    title="Open in new tab"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <ExternalLink className="h-3 w-3 text-white" />
+                  </a>
+                )}
+                {/* File info */}
+                <div className="p-1">
+                  <p className="text-[9px] truncate">{f.originalName || f.fileName}</p>
+                  <p className="text-[8px] text-muted-foreground">{formatFileSize(f.fileSize)}</p>
                 </div>
-              ) : f.mimeType.includes("pdf") ? (
-                <div className="aspect-square flex items-center justify-center bg-red-50 dark:bg-red-950/30">
-                  <FileText className="h-8 w-8 text-red-400/60" />
-                </div>
-              ) : f.mimeType.startsWith("video/") ? (
-                <div className="aspect-square flex items-center justify-center bg-muted/30">
-                  <Film className="h-8 w-8 text-muted-foreground/40" />
-                </div>
-              ) : (
-                <div className="aspect-square flex items-center justify-center bg-muted/30">
-                  <File className="h-8 w-8 text-muted-foreground/40" />
-                </div>
-              )}
-              <div className="p-1">
-                <p className="text-[9px] truncate">{f.originalName || f.fileName}</p>
-                <p className="text-[8px] text-muted-foreground">{formatFileSize(f.fileSize)}</p>
               </div>
-            </button>
-          ))}
+            );
+          })}
         </div>
       </div>
     );
@@ -701,7 +717,25 @@ function VersionPreviewModal({
             {/* Active file preview */}
             {activeFile && (
               <div className="border rounded-lg p-3 bg-muted/5">
-                <p className="text-xs font-medium mb-2">{activeFile.originalName || activeFile.fileName}</p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-medium truncate">{activeFile.originalName || activeFile.fileName}</p>
+                  <div className="flex gap-1 shrink-0">
+                    {getUrl(activeFile) && (
+                      <>
+                        <Button variant="outline" size="sm" className="h-7 text-xs" asChild>
+                          <a href={getUrl(activeFile)} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="h-3 w-3 mr-1" /> Open
+                          </a>
+                        </Button>
+                        <Button variant="outline" size="sm" className="h-7 text-xs" asChild>
+                          <a href={getUrl(activeFile)} download target="_blank" rel="noopener noreferrer">
+                            <Download className="h-3 w-3 mr-1" /> Save
+                          </a>
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
                 <div className="flex items-center justify-center min-h-[200px] bg-muted/10 rounded">
                   {(() => {
                     const url = getUrl(activeFile);
@@ -711,21 +745,40 @@ function VersionPreviewModal({
                         <p className="text-xs text-muted-foreground">File URL not available</p>
                       </div>
                     );
+                    // Images: inline preview works
                     if (activeFile.mimeType?.startsWith("image/"))
                       return <img src={url} alt="" className="max-w-full max-h-[50vh] object-contain rounded" />;
+                    // Videos: inline preview works
                     if (activeFile.mimeType?.startsWith("video/"))
                       return <video ref={videoRef} controls className="w-full max-h-[50vh] rounded" src={url} />;
-                    if (activeFile.mimeType?.includes("pdf"))
-                      return <iframe src={`${url}#toolbar=1`} className="w-full h-[50vh] rounded" title={activeFile.fileName} />;
+                    // PDFs & other files: Cloudinary blocks iframes, show download/open prompt
                     return (
                       <div className="text-center py-8">
-                        <File className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
-                        <p className="text-xs text-muted-foreground mb-2">Preview not available</p>
-                        <Button variant="outline" size="sm" asChild>
-                          <a href={url} download target="_blank" rel="noopener noreferrer">
-                            <Download className="h-3.5 w-3.5 mr-1" /> Download
-                          </a>
-                        </Button>
+                        {activeFile.mimeType?.includes("pdf") ? (
+                          <FileText className="h-12 w-12 mx-auto text-red-400/60 mb-3" />
+                        ) : (
+                          <File className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
+                        )}
+                        <p className="text-xs text-muted-foreground mb-1">
+                          {activeFile.mimeType?.includes("pdf")
+                            ? "PDF preview unavailable in browser"
+                            : "Preview not available"}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground/60 mb-3">
+                          Open in new tab or download to view
+                        </p>
+                        <div className="flex gap-2 justify-center">
+                          <Button size="sm" variant="outline" asChild>
+                            <a href={url} target="_blank" rel="noopener noreferrer">
+                              <ExternalLink className="h-3.5 w-3.5 mr-1" /> Open in New Tab
+                            </a>
+                          </Button>
+                          <Button size="sm" variant="default" asChild>
+                            <a href={url} download target="_blank" rel="noopener noreferrer">
+                              <Download className="h-3.5 w-3.5 mr-1" /> Download
+                            </a>
+                          </Button>
+                        </div>
                       </div>
                     );
                   })()}
@@ -745,15 +798,6 @@ function VersionPreviewModal({
                     </div>
                   </div>
                 ) : null}
-                <div className="flex justify-end mt-2">
-                  {getUrl(activeFile) && (
-                    <Button variant="outline" size="sm" asChild>
-                      <a href={getUrl(activeFile)} download target="_blank" rel="noopener noreferrer">
-                        <Download className="h-3.5 w-3.5 mr-1" /> Download
-                      </a>
-                    </Button>
-                  )}
-                </div>
               </div>
             )}
           </div>
