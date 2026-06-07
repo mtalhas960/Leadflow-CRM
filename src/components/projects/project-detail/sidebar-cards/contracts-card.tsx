@@ -48,7 +48,10 @@ export default function ContractsCard({ projectId, workspaceId, clientId }: Cont
   useEffect(() => {
     if (!workspaceId || !projectId) return;
     setLoading(true);
-    getContracts(workspaceId, { projectId, max: 50 })
+    // Fetch all workspace contracts and filter client-side (avoids
+    // needing a composite Firestore index for workspaceId + projectId + createdAt)
+    getContracts(workspaceId, { max: 100 })
+      .then((all) => all.filter((c) => c.projectId === projectId))
       .then(setContracts)
       .catch(() => setContracts([]))
       .finally(() => setLoading(false));

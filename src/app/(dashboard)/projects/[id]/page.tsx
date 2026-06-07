@@ -709,11 +709,32 @@ export default function ProjectDetailPage() {
   if (loading) {
     return (
       <div className="mx-auto space-y-6">
-        <Skeleton className="h-5 w-32" />
-        <Skeleton className="h-8 w-64" />
-        <Card><CardContent className="p-6 space-y-4">
-          {Array.from({ length: 5 }).map((_, i) => (<Skeleton key={i} className="h-10 w-full" />))}
-        </CardContent></Card>
+        {/* Header skeleton */}
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="space-y-2">
+            <Skeleton className="h-5 w-32" />
+            <Skeleton className="h-8 w-64" />
+            <div className="flex gap-2">
+              <Skeleton className="h-5 w-20" />
+              <Skeleton className="h-5 w-24" />
+            </div>
+          </div>
+          <Skeleton className="h-9 w-28" />
+        </div>
+        {/* Tab bar skeleton */}
+        <Skeleton className="h-9 w-[500px] rounded-lg" />
+        {/* Two-column layout skeleton */}
+        <div className="flex flex-col lg:flex-row gap-6">
+          <div className="w-full lg:w-[65%] space-y-4">
+            <Skeleton className="h-48 w-full rounded-lg" />
+            <Skeleton className="h-32 w-full rounded-lg" />
+          </div>
+          <div className="w-full lg:w-[35%] space-y-4">
+            <Skeleton className="h-40 w-full rounded-lg" />
+            <Skeleton className="h-28 w-full rounded-lg" />
+            <Skeleton className="h-36 w-full rounded-lg" />
+          </div>
+        </div>
       </div>
     );
   }
