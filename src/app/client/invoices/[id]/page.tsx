@@ -183,6 +183,7 @@ export default function ClientInvoiceDetailPage() {
   }
 
   // Don't render draft invoices (redirect will fire)
+ 
   if (invoice.status === "draft") return null;
 
   const canUploadProof =
@@ -190,6 +191,8 @@ export default function ClientInvoiceDetailPage() {
   const isPendingReview = invoice.status === "pending_review";
   const proof = invoice.paymentProof;
 
+  // ── Detect if invoice uses hourly billing ──
+  const isHourlyInvoice = invoice.lineItems.some((item) => item.serviceType === "hourly");
   return (
     <div>
       <BackButton href="/client/invoices" />
@@ -369,8 +372,8 @@ export default function ClientInvoiceDetailPage() {
             <thead>
               <tr className="border-b text-left text-muted-foreground">
                 <th className="pb-2 font-medium">Description</th>
-                <th className="pb-2 font-medium text-right">Qty</th>
-                <th className="pb-2 font-medium text-right">Unit Price</th>
+                <th className="pb-2 font-medium text-right">{isHourlyInvoice ? "Hours" : "Qty"}</th>
+                <th className="pb-2 font-medium text-right">{isHourlyInvoice ? "Rate" : "Unit Price"}</th>
                 <th className="pb-2 font-medium text-right">Total</th>
               </tr>
             </thead>
