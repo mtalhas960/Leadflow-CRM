@@ -59,7 +59,7 @@ function formatDate(ts: { toDate?: () => Date; seconds?: number } | null | undef
 function ClientContractDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const { uid } = useClientUser();
+  const { uid, email: userEmail } = useClientUser();
 
   const [contract, setContract] = useState<Contract | null>(null);
   const [loading, setLoading] = useState(true);
@@ -113,13 +113,13 @@ function ClientContractDetailPage({ params }: { params: Promise<{ id: string }> 
     if (!contract || !uid) return;
     setSigning(true);
     try {
-      // Find the signer by matching uid in the signers list
-      const matchingSigner = contract.signers?.find((s) => s.email === uid || s.id.includes(uid));
+      // Find the signer by matching email (signers are stored with email)
+      const matchingSigner = contract.signers?.find((s) => s.email === userEmail);
       const signerId = matchingSigner?.id || `signer-${uid}`;
       await signContract(contract.id, signerId, uid);
       toast.success("Document signed successfully");
-      setShowSignDialog(false);
-      load();
+      // Reload to reflect updated status immediately
+      window.location.reload();
     } catch {
       toast.error("Failed to sign");
     } finally {
@@ -131,10 +131,10 @@ function ClientContractDetailPage({ params }: { params: Promise<{ id: string }> 
     if (!contract) return;
     setSigning(true);
     try {
-      const matchingSigner = contract.signers?.find((s) => s.email === uid || s.id.includes(uid));
+      const matchingSigner = contract.signers?.find((s) => s.email === userEmail);
       await rejectContract(contract.id, rejectReason, {
         userId: uid,
-        userName: matchingSigner?.name || uid,
+        userName: matchingSigner?.name || userEmail,
       });
       toast.success("Document rejected");
       setShowRejectDialog(false);

@@ -179,16 +179,27 @@ function ClientContractsPage() {
                   variant="ghost"
                   size="sm"
                   className="h-8 w-8 p-0"
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.stopPropagation();
-                    // Download contract content as HTML file
-                    const blob = new Blob([contract.content || contract.contractTitle], { type: 'text/html' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `${contract.contractTitle.replace(/[^a-z0-9]/gi, '_')}.html`;
-                    a.click();
-                    URL.revokeObjectURL(url);
+                    try {
+                      const { generateContractPdf } = await import('@/lib/pdf-contract');
+                      const blob = await generateContractPdf({
+                        title: contract.contractTitle || 'Contract',
+                        type: contract.type || 'contract',
+                        status: contract.status || 'sent',
+                        content: contract.content || '',
+                        signers: (contract as any).signers || [],
+                        dateSent: (contract as any).dateSent?.toDate?.()?.toLocaleDateString(),
+                      });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `${contract.contractTitle.replace(/[^a-z0-9]/gi, '_')}.pdf`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    } catch (err) {
+                      console.error('PDF generation failed', err);
+                    }
                   }}
                 >
                   <Download className="h-4 w-4" />
