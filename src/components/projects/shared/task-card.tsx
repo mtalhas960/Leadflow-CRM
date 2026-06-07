@@ -317,11 +317,6 @@ export function TaskCard({
                       </div>
                     </div>
                   )}
-                  {task.createdAt && !isSubtask && (
-                    <span className="text-xs text-muted-foreground whitespace-nowrap hidden sm:inline">
-                      {task.createdAt.toDate ? new Date(task.createdAt.toDate()).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""}
-                    </span>
-                  )}
                   {/* Status */}
                   <div className="relative">
                     {onStatusChange ? (

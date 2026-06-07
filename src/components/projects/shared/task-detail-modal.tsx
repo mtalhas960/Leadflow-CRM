@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { ProjectTask, ProjectTaskStatus, TaskFile } from "@/types";
 import { updateTask, deleteTask, createTask, getProjectTasks } from "@/lib/firebase/project-tasks";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
@@ -32,18 +31,14 @@ import {
   Image,
   File,
   Eye,
-  Download,
   X,
-  CheckCircle2,
-  Circle,
-  Plus,
-  GripVertical,
-  MoreHorizontal,
   Globe,
   Lock,
-  ChevronDown,
+  Pencil,
+  Check,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Timestamp } from "firebase/firestore";
 
 // ─── Status Config ──────────────────────────────────────────────────────────
 
@@ -67,20 +62,6 @@ function getStatusStyle(color: string) {
   return { backgroundColor: color, color: "#374151" };
 }
 
-function parseDate(dueDate: unknown): Date | null {
-  if (!dueDate) return null;
-  if (typeof (dueDate as Record<string, unknown>).toDate === "function") return (dueDate as { toDate: () => Date }).toDate();
-  if (typeof dueDate === "object" && "seconds" in (dueDate as Record<string, unknown>)) return new Date((dueDate as { seconds: number }).seconds * 1000);
-  if (typeof dueDate === "string") { const d = new Date(dueDate); return isNaN(d.getTime()) ? null : d; }
-  if (dueDate instanceof Date) return dueDate;
-  return null;
-}
-
-function formatDate(date: Date | null): string {
-  if (!date) return "";
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-}
-
 function getInitials(name: string): string {
   return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 }
@@ -97,7 +78,40 @@ function getFileIcon(mimeType: string) {
   return <File className="h-4 w-4" />;
 }
 
-// ─── Rich Text Editor (Simple) ─────────────────────────────────────────────
+// ─── Date Helpers ────────────────────────────────────────────────────────────
+
+/** Parse dueDate from Firestore Timestamp, Date, or null → local Date or null */
+function parseDueDate(dueDate: unknown): Date | null {
+  if (!dueDate) return null;
+  if (typeof (dueDate as Record<string, unknown>).toDate === "function") return (dueDate as { toDate: () => Date }).toDate();
+  if (typeof dueDate === "object" && "seconds" in (dueDate as Record<string, unknown>)) return new Date((dueDate as { seconds: number }).seconds * 1000);
+  if (typeof dueDate === "string") { const d = new Date(dueDate); return isNaN(d.getTime()) ? null : d; }
+  if (dueDate instanceof Date) return dueDate;
+  return null;
+}
+
+/** Format date for display */
+function formatDate(date: Date | null): string {
+  if (!date) return "";
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+/** Convert Date to YYYY-MM-DD string in LOCAL timezone (for date input value) */
+function toDateInputValue(date: Date | null): string {
+  if (!date) return "";
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/** Parse YYYY-MM-DD to Date at NOON local time (avoids timezone offset issues) */
+function parseDateInput(val: string): Date {
+  const [year, month, day] = val.split("-").map(Number);
+  return new Date(year, month - 1, day, 12, 0, 0);
+}
+
+// ─── Rich Text Editor ───────────────────────────────────────────────────────
 
 function RichTextEditor({ value, onChange, readOnly, placeholder }: {
   value: string;
@@ -216,54 +230,14 @@ function FileItem({ file, onDelete, readOnly }: { file: TaskFile; onDelete?: () 
   );
 }
 
-// ─── Subtask Item ──────────────────────────────────────────────────────────
-
-function SubtaskItem({ task, memberMap, onToggle, onDelete }: {
-  task: ProjectTask;
-  memberMap: Map<string, { displayName: string; photoURL?: string | null }>;
-  onToggle: () => void;
-  onDelete: () => void;
-}) {
-  const isComplete = task.status.parent === "Complete";
-  const assignee = task.assigneeId ? memberMap.get(task.assigneeId) : null;
-
-  return (
-    <div className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-accent/30 group transition-colors">
-      <button onClick={onToggle} className="shrink-0">
-        {isComplete ? (
-          <CheckCircle2 className="h-4 w-4 text-foreground" />
-        ) : (
-          <Circle className="h-4 w-4 text-muted-foreground" />
-        )}
-      </button>
-      <span className={cn("flex-1 text-sm min-w-0 truncate", isComplete && "line-through text-muted-foreground")}>
-        {task.taskName}
-      </span>
-      {assignee && (
-        <div className="h-5 w-5 rounded-full bg-muted flex items-center justify-center shrink-0" title={assignee.displayName}>
-          <span className="text-[8px] font-medium text-foreground">{getInitials(assignee.displayName)}</span>
-        </div>
-      )}
-      {task.dueDate && (
-        <span className="text-[10px] text-muted-foreground whitespace-nowrap">{formatDate(parseDate(task.dueDate))}</span>
-      )}
-      <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={getStatusStyle(task.status.color)}>
-        {task.status.name}
-      </span>
-      <button onClick={onDelete} className="opacity-0 group-hover:opacity-100 h-5 w-5 flex items-center justify-center rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive">
-        <X className="h-3 w-3" />
-      </button>
-    </div>
-  );
-}
-
-// ─── Main Component ────────────────────────────────────────────────────────
+// ─── Props ──────────────────────────────────────────────────────────────────
 
 interface TaskDetailModalProps {
   task: ProjectTask;
   projectId: string;
   workspaceId: string;
   userId: string;
+  /** Members for assignee dropdown — should already exclude clients */
   members: Array<{ userId: string; displayName: string; email: string; photoURL?: string | null }>;
   memberMap: Map<string, { displayName: string; photoURL?: string | null }>;
   open: boolean;
@@ -271,6 +245,8 @@ interface TaskDetailModalProps {
   onTaskUpdated?: () => void;
   readOnly?: boolean;
 }
+
+// ─── Main Component ────────────────────────────────────────────────────────
 
 export function TaskDetailModal({
   task: initialTask,
@@ -284,37 +260,99 @@ export function TaskDetailModal({
   onTaskUpdated,
   readOnly,
 }: TaskDetailModalProps) {
+  // ── Local working copy (not saved until Done) ────────────────────────────
   const [task, setTask] = useState<ProjectTask>(initialTask);
+  const [dirtyFields, setDirtyFields] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
-  // Editing state
+  // Reset when modal opens
+  useEffect(() => {
+    if (open) {
+      setTask(initialTask);
+      setDirtyFields(new Set());
+      setDeleting(false);
+    }
+  }, [open, initialTask]);
+
+  // ── Title editing ────────────────────────────────────────────────────────
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const titleRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (isEditingTitle && titleRef.current) { titleRef.current.focus(); titleRef.current.select(); }
+  }, [isEditingTitle]);
 
-  // Subtask creation
-  const [showAddSubtask, setShowAddSubtask] = useState(false);
-  const [newSubtaskName, setNewSubtaskName] = useState("");
-  const [creatingSubtask, setCreatingSubtask] = useState(false);
+  // ── Dirty field tracker ──────────────────────────────────────────────────
+  const markDirty = (field: string) => {
+    setDirtyFields((prev) => {
+      if (prev.has(field)) return prev;
+      return new Set(prev).add(field);
+    });
+  };
 
-  // All subtasks for this task
-  const [subtasks, setSubtasks] = useState<ProjectTask[]>([]);
+  const hasUnsaved = dirtyFields.size > 0;
 
-  const loadSubtasks = useCallback(async () => {
-    if (!task.hasSubtasks) return;
+  // ── Field updates (local only) ───────────────────────────────────────────
+  const setField = <K extends keyof ProjectTask>(key: K, value: ProjectTask[K]) => {
+    setTask((prev) => ({ ...prev, [key]: value }));
+    markDirty(key as string);
+  };
+
+  // ── Save handler ─────────────────────────────────────────────────────────
+  const handleSave = async () => {
+    if (dirtyFields.size === 0) {
+      onOpenChange(false);
+      return;
+    }
+    setSaving(true);
     try {
-      const { getSubtasks } = await import("@/lib/firebase/project-tasks");
-      const data = await getSubtasks(task.id);
-      setSubtasks(data);
-    } catch { /* ignore */ }
-  }, [task.id, task.hasSubtasks]);
+      const updates: Record<string, unknown> = {};
 
-  useEffect(() => { if (open) { setTask(initialTask); loadSubtasks(); } }, [open, initialTask, loadSubtasks]);
-  useEffect(() => { if (isEditingTitle && titleRef.current) { titleRef.current.focus(); titleRef.current.select(); } }, [isEditingTitle]);
+      if (dirtyFields.has("taskName")) updates.taskName = task.taskName;
+      if (dirtyFields.has("status")) updates.status = task.status;
+      if (dirtyFields.has("assigneeId")) updates.assigneeId = task.assigneeId;
+      if (dirtyFields.has("description")) updates.description = task.description || null;
+      if (dirtyFields.has("visibility")) updates.visibility = task.visibility;
 
-  // ─── File Upload ───────────────────────────────────────────────────────
+      if (dirtyFields.has("dueDate")) {
+        const d = parseDueDate(task.dueDate);
+        // Pass Date directly — updateTask() handles Timestamp.fromDate()
+        updates.dueDate = d;
+      }
 
+      if (Object.keys(updates).length > 0) {
+        await updateTask(task.id, updates as Parameters<typeof updateTask>[1]);
+      }
+
+      setDirtyFields(new Set());
+      onTaskUpdated?.();
+      onOpenChange(false);
+    } catch {
+      toast.error("Failed to save changes");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ── Delete handler ──────────────────────────────────────────────────────
+  const handleDelete = async () => {
+    if (!confirm("Delete this task?")) return;
+    setDeleting(true);
+    try {
+      await deleteTask(task.id);
+      toast.success("Task deleted");
+      onOpenChange(false);
+      onTaskUpdated?.();
+    } catch {
+      toast.error("Failed to delete task");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  // ── File Upload ──────────────────────────────────────────────────────────
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -331,13 +369,16 @@ export function TaskDetailModal({
         formData.append("projectId", projectId);
         formData.append("taskId", task.id);
 
-        const headers = await getApiAuthHeaders();
+        const headers = await getApiAuthHeaders(workspaceId);
         const res = await fetch("/api/deliverables/upload-file", {
           method: "POST",
           headers: { ...headers, "x-upload-context": "task" },
           body: formData,
         });
-        if (!res.ok) throw new Error("Upload failed");
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ error: "Upload failed" }));
+          throw new Error(err.error || "Upload failed");
+        }
         const data = await res.json();
 
         const taskFile: TaskFile = {
@@ -357,8 +398,8 @@ export function TaskDetailModal({
       await updateTask(task.id, { files: updatedFiles });
       setTask((prev) => ({ ...prev, files: updatedFiles }));
       toast.success(`${uploadedFiles.length} file(s) uploaded`);
-    } catch {
-      toast.error("Failed to upload file");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to upload file");
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -376,126 +417,33 @@ export function TaskDetailModal({
     }
   };
 
-  // ─── Field Updates ─────────────────────────────────────────────────────
-
-  const updateField = async (data: Record<string, unknown>) => {
-    setSaving(true);
-    try {
-      await updateTask(task.id, data);
-      setTask((prev) => ({ ...prev, ...data }));
-      onTaskUpdated?.();
-    } catch {
-      toast.error("Failed to update task");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleStatusChange = (value: string) => {
-    const opt = STATUS_OPTIONS.find((s) => s.name === value);
-    if (opt) updateField({ status: opt });
-  };
-
-  const handleAssigneeChange = (value: string) => {
-    updateField({ assigneeId: value === "none" ? null : value });
-  };
-
-  const handleDueDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    updateField({ dueDate: val ? new Date(val + "T00:00:00") : null });
-  };
-
-  const handleTitleSave = () => {
-    if (editTitle.trim() && editTitle.trim() !== task.taskName) {
-      updateField({ taskName: editTitle.trim() });
-    }
-    setIsEditingTitle(false);
-  };
-
-  const handleDescriptionChange = (val: string) => {
-    updateField({ description: val || null });
-  };
-
-  const handleVisibilityChange = (value: string) => {
-    updateField({ visibility: value as "Public" | "Private" });
-  };
-
-  // ─── Subtask Creation ──────────────────────────────────────────────────
-
-  const handleCreateSubtask = async () => {
-    if (!newSubtaskName.trim()) return;
-    setCreatingSubtask(true);
-    try {
-      await createTask(projectId, workspaceId, userId, {
-        taskName: newSubtaskName.trim(),
-        parentTaskId: task.id,
-      });
-      // Mark parent as having subtasks
-      if (!task.hasSubtasks) {
-        await updateTask(task.id, { hasSubtasks: true });
-        setTask((prev) => ({ ...prev, hasSubtasks: true }));
-      }
-      setNewSubtaskName("");
-      setShowAddSubtask(false);
-      toast.success("Subtask created");
-      const { getSubtasks } = await import("@/lib/firebase/project-tasks");
-      const data = await getSubtasks(task.id);
-      setSubtasks(data);
-      onTaskUpdated?.();
-    } catch {
-      toast.error("Failed to create subtask");
-    } finally {
-      setCreatingSubtask(false);
-    }
-  };
-
-  const handleSubtaskToggle = async (subtask: ProjectTask) => {
-    const isComplete = subtask.status.parent === "Complete";
-    try {
-      await updateTask(subtask.id, {
-        status: isComplete
-          ? { parent: "To Do", name: "Not Started", color: "#DDDDDD" }
-          : { parent: "Complete", name: "Complete", color: "#D1F5CF" },
-      });
-      setSubtasks((prev) => prev.map((t) => t.id === subtask.id ? {
-        ...t,
-        status: isComplete
-          ? { parent: "To Do", name: "Not Started", color: "#DDDDDD" }
-          : { parent: "Complete", name: "Complete", color: "#D1F5CF" },
-      } : t));
-      onTaskUpdated?.();
-    } catch { toast.error("Failed to update subtask"); }
-  };
-
-  const handleSubtaskDelete = async (subtask: ProjectTask) => {
-    try {
-      await deleteTask(subtask.id);
-      setSubtasks((prev) => prev.filter((t) => t.id !== subtask.id));
-      toast.success("Subtask deleted");
-      onTaskUpdated?.();
-    } catch { toast.error("Failed to delete subtask"); }
-  };
-
-  // ─── Derived ───────────────────────────────────────────────────────────
-
-  const dueDateValue = parseDate(task.dueDate);
+  // ── Derived ──────────────────────────────────────────────────────────────
+  const dueDateValue = parseDueDate(task.dueDate);
   const assignee = task.assigneeId ? memberMap.get(task.assigneeId) : null;
   const isReadOnly = readOnly || !onTaskUpdated;
 
   // ═══ RENDER ═════════════════════════════════════════════════════════════
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col p-0 gap-0">
         {/* ─── Header ─── */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
-          <DialogTitle className="text-lg font-semibold">Task Details</DialogTitle>
-          {saving && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+          <div className="flex items-center gap-2">
+            <DialogTitle className="text-lg font-semibold">Task Details</DialogTitle>
+            {hasUnsaved && !isReadOnly && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                Unsaved changes
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {saving && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+          </div>
         </div>
 
         {/* ─── Scrollable Body ─── */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
-          {/* Title */}
+          {/* ── Title ── */}
           <div>
             {isEditingTitle && !isReadOnly ? (
               <div className="flex items-center gap-2">
@@ -503,23 +451,37 @@ export function TaskDetailModal({
                   ref={titleRef}
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") handleTitleSave(); if (e.key === "Escape") setIsEditingTitle(false); }}
-                  onBlur={handleTitleSave}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      if (editTitle.trim() && editTitle.trim() !== task.taskName) {
+                        setField("taskName", editTitle.trim());
+                      }
+                      setIsEditingTitle(false);
+                    }
+                    if (e.key === "Escape") setIsEditingTitle(false);
+                  }}
+                  onBlur={() => {
+                    if (editTitle.trim() && editTitle.trim() !== task.taskName) {
+                      setField("taskName", editTitle.trim());
+                    }
+                    setIsEditingTitle(false);
+                  }}
                   className="flex-1 text-lg font-semibold bg-transparent border-b border-foreground/20 px-1 py-0.5 text-foreground focus:outline-none"
                   autoFocus
                 />
               </div>
             ) : (
               <h2
-                className={cn("text-lg font-semibold text-foreground", !isReadOnly && "cursor-pointer hover:text-primary")}
+                className={cn("text-lg font-semibold text-foreground group flex items-center gap-2", !isReadOnly && "cursor-pointer hover:text-primary")}
                 onClick={() => { if (!isReadOnly) { setEditTitle(task.taskName); setIsEditingTitle(true); } }}
               >
                 {task.taskName}
+                {!isReadOnly && <Pencil className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />}
               </h2>
             )}
           </div>
 
-          {/* Info Grid: Status, Due Date, Assignee, Visibility */}
+          {/* ── Info Grid: Status, Due Date, Assignee, Visibility ── */}
           <div className="grid grid-cols-2 gap-4">
             {/* Status */}
             <div className="space-y-1.5">
@@ -529,7 +491,10 @@ export function TaskDetailModal({
                   {task.status.name}
                 </span>
               ) : (
-                <Select value={task.status.name} onValueChange={handleStatusChange}>
+                <Select value={task.status.name} onValueChange={(v) => {
+                  const opt = STATUS_OPTIONS.find((s) => s.name === v);
+                  if (opt) setField("status", opt);
+                }}>
                   <SelectTrigger className="h-8 text-xs">
                     <SelectValue />
                   </SelectTrigger>
@@ -556,13 +521,21 @@ export function TaskDetailModal({
                 <div className="relative">
                   <input
                     type="date"
-                    value={dueDateValue ? dueDateValue.toISOString().split("T")[0] : ""}
-                    onChange={handleDueDateChange}
+                    value={toDateInputValue(dueDateValue)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val) {
+                        const d = parseDateInput(val);
+                        setField("dueDate", Timestamp.fromDate(d));
+                      } else {
+                        setField("dueDate", null as unknown as ProjectTask["dueDate"]);
+                      }
+                    }}
                     className="w-full h-8 px-2 text-xs border border-border rounded bg-background text-foreground focus:outline-none focus:border-foreground/30"
                   />
                   {dueDateValue && (
                     <button
-                      onClick={() => updateField({ dueDate: null })}
+                      onClick={() => setField("dueDate", null as unknown as ProjectTask["dueDate"])}
                       className="absolute right-1 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center text-muted-foreground hover:text-destructive"
                     >
                       <X className="h-3 w-3" />
@@ -589,7 +562,9 @@ export function TaskDetailModal({
                   )}
                 </div>
               ) : (
-                <Select value={task.assigneeId || "none"} onValueChange={handleAssigneeChange}>
+                <Select value={task.assigneeId || "none"} onValueChange={(v) => {
+                  setField("assigneeId", v === "none" ? null : v);
+                }}>
                   <SelectTrigger className="h-8 text-xs">
                     <SelectValue />
                   </SelectTrigger>
@@ -619,7 +594,9 @@ export function TaskDetailModal({
                   {task.visibility}
                 </div>
               ) : (
-                <Select value={task.visibility} onValueChange={handleVisibilityChange}>
+                <Select value={task.visibility} onValueChange={(v) => {
+                  setField("visibility", v as "Public" | "Private");
+                }}>
                   <SelectTrigger className="h-8 text-xs">
                     <SelectValue />
                   </SelectTrigger>
@@ -636,7 +613,7 @@ export function TaskDetailModal({
             </div>
           </div>
 
-          {/* Description */}
+          {/* ── Description ── */}
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground">Description</Label>
             {isReadOnly ? (
@@ -650,70 +627,13 @@ export function TaskDetailModal({
             ) : (
               <RichTextEditor
                 value={task.description || ""}
-                onChange={handleDescriptionChange}
+                onChange={(val) => setField("description", val || null as unknown as string)}
                 placeholder="Write your description here..."
               />
             )}
           </div>
 
-          {/* Subtasks */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-xs text-muted-foreground">Subtasks ({subtasks.length})</Label>
-              {!isReadOnly && (
-                <button
-                  onClick={() => setShowAddSubtask(!showAddSubtask)}
-                  className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80"
-                >
-                  <Plus className="h-3 w-3" /> Add Subtask
-                </button>
-              )}
-            </div>
-
-            {showAddSubtask && !isReadOnly && (
-              <div className="flex items-center gap-2 p-2 border border-border rounded-lg bg-muted/30">
-                <input
-                  value={newSubtaskName}
-                  onChange={(e) => setNewSubtaskName(e.target.value)}
-                  placeholder="Subtask name..."
-                  className="flex-1 bg-transparent text-sm border-0 focus:outline-none placeholder:text-muted-foreground/50"
-                  autoFocus
-                  onKeyDown={(e) => { if (e.key === "Enter") handleCreateSubtask(); if (e.key === "Escape") setShowAddSubtask(false); }}
-                />
-                <button
-                  onClick={handleCreateSubtask}
-                  disabled={creatingSubtask || !newSubtaskName.trim()}
-                  className="text-xs px-2 py-1 bg-foreground text-background rounded hover:opacity-90 disabled:opacity-50"
-                >
-                  {creatingSubtask ? <Loader2 className="h-3 w-3 animate-spin" /> : "Add"}
-                </button>
-                <button
-                  onClick={() => { setShowAddSubtask(false); setNewSubtaskName(""); }}
-                  className="text-xs px-2 py-1 text-muted-foreground hover:text-foreground"
-                >
-                  Cancel
-                </button>
-              </div>
-            )}
-
-            <div className="space-y-0.5">
-              {subtasks.length === 0 ? (
-                <p className="text-xs text-muted-foreground py-2">No subtasks</p>
-              ) : (
-                subtasks.map((sub) => (
-                  <SubtaskItem
-                    key={sub.id}
-                    task={sub}
-                    memberMap={memberMap}
-                    onToggle={() => handleSubtaskToggle(sub)}
-                    onDelete={() => handleSubtaskDelete(sub)}
-                  />
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Files */}
+          {/* ── Files ── */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label className="text-xs text-muted-foreground">Files ({(task.files || []).length})</Label>
@@ -754,15 +674,6 @@ export function TaskDetailModal({
               )}
             </div>
           </div>
-
-          {/* Metadata */}
-          <div className="pt-4 border-t border-border">
-            <div className="flex items-center gap-4 text-[10px] text-muted-foreground">
-              <span>Created {task.createdAt?.toDate?.()?.toLocaleDateString?.() || "—"}</span>
-              <span>ID: {task.id.slice(0, 8)}...</span>
-              {task.completedAt && <span>Completed {task.completedAt.toDate().toLocaleDateString()}</span>}
-            </div>
-          </div>
         </div>
 
         {/* ─── Footer ─── */}
@@ -772,25 +683,33 @@ export function TaskDetailModal({
               <Button
                 variant="outline"
                 size="sm"
-                className="text-xs"
-                onClick={() => {
-                  if (confirm("Delete this task and all its subtasks?")) {
-                    const allIds = [task.id, ...subtasks.map((s) => s.id)];
-                    Promise.all(allIds.map((id) => deleteTask(id))).then(() => {
-                      toast.success("Task deleted");
-                      onOpenChange(false);
-                      onTaskUpdated?.();
-                    }).catch(() => toast.error("Failed to delete task"));
-                  }
-                }}
+                className="text-xs text-destructive border-destructive/30 hover:bg-destructive/10"
+                onClick={handleDelete}
+                disabled={deleting}
               >
-                <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
+                {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Trash2 className="h-3.5 w-3.5 mr-1" />}
+                Delete
               </Button>
             )}
           </div>
-          <Button variant="default" size="sm" className="text-xs" onClick={() => onOpenChange(false)}>
-            {isReadOnly ? "Close" : "Done"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" className="text-xs" onClick={() => {
+              if (hasUnsaved && !confirm("Discard unsaved changes?")) return;
+              onOpenChange(false);
+            }}>
+              Cancel
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              className="text-xs"
+              onClick={handleSave}
+              disabled={saving}
+            >
+              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : hasUnsaved ? <Check className="h-3.5 w-3.5 mr-1" /> : null}
+              {isReadOnly ? "Close" : saving ? "Saving..." : hasUnsaved ? "Save & Close" : "Done"}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

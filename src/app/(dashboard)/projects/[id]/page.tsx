@@ -72,7 +72,7 @@ import NotesCard from "@/components/projects/project-detail/sidebar-cards/notes-
 import ContractsCard from "@/components/projects/project-detail/sidebar-cards/contracts-card";
 import InvoicesCard from "@/components/projects/project-detail/sidebar-cards/invoices-card";
 import ProfitabilityCard from "@/components/projects/project-detail/sidebar-cards/profitability-card";
-import LinksCard from "@/components/projects/project-detail/sidebar-cards/links-card";
+import LinksEmbedsCard from "@/components/projects/project-detail/sidebar-cards/links-embeds-card";
 import DeliveryFlowCard from "@/components/projects/project-detail/sidebar-cards/delivery-flow-card";
 import CustomFieldsCard from "@/components/projects/project-detail/sidebar-cards/custom-fields-card";
 import ActivityLogCard from "@/components/projects/project-detail/sidebar-cards/activity-log-card";
@@ -692,6 +692,7 @@ export default function ProjectDetailPage() {
   const topLevelTasks = useMemo(() => tasks.filter((t) => !t.parentTaskId && !t.isSubtask && !t.milestoneId), [tasks]);
   const getSubtasks = useCallback((parentId: string) => tasks.filter((t) => t.parentTaskId === parentId && t.isSubtask), [tasks]);
   const clientMembers = useMemo(() => members.filter((m) => project?.clients?.includes(m.userId)), [members, project?.clients]);
+  const assignableMembers = useMemo(() => members.filter((m) => m.role !== "client"), [members]);
   const tasksCompleted = useMemo(() => tasks.filter((t) => t.status.parent === "Complete").length, [tasks]);
 
   // ── Milestone Task Map (tasks nested under milestones) ──────────────────────
@@ -777,7 +778,7 @@ export default function ProjectDetailPage() {
                   onTitleChange={handleTitleChange}
                   onAssigneeChange={handleTaskAssigneeChange}
                   onDueDateChange={handleTaskDueDateChange}
-                  taskMembers={members}
+                  taskMembers={assignableMembers}
                   onAddTask={handleStartInlineTask}
                   onAddMilestone={handleOpenMilestoneModal}
                   getSubtasks={getSubtasks}
@@ -826,7 +827,7 @@ export default function ProjectDetailPage() {
                 <ClientsCard projectId={projectId} members={members} clientIds={project.clients || []} onClientsChange={(newIds) => {
                   setProject((prev) => prev ? { ...prev, clients: newIds } : prev);
                 }} />
-                <LinksCard project={project} onLinksChange={(newLinks) => setProject((prev) => prev ? { ...prev, linksAndEmbeds: newLinks } : prev)} />
+                <LinksEmbedsCard project={project} onProjectUpdated={loadProject} />
                 <DeliveryFlowCard project={project} onProjectUpdated={loadProject} />
                 <NotesCard notes={notes} onCreateNote={handleCreateNote} onDeleteNote={handleDeleteNote} />
                 <ContractsCard projectId={projectId} />
@@ -853,14 +854,14 @@ export default function ProjectDetailPage() {
               onTitleChange={handleTitleChange}
               onAssigneeChange={handleTaskAssigneeChange}
               onDueDateChange={handleTaskDueDateChange}
-              taskMembers={members}
-              onAddTask={handleStartInlineTask}
-              onAddMilestone={handleOpenMilestoneModal}
-              getSubtasks={getSubtasks}
-              expandedTasks={expandedTasks}
-              onToggleSubtaskExpand={toggleSubtaskExpand}
-              onTaskDragStart={handleTaskDragStart}
-              onTaskDrop={handleTaskDrop}
+              taskMembers={assignableMembers}
+               onAddTask={handleStartInlineTask}
+               onAddMilestone={handleOpenMilestoneModal}
+               getSubtasks={getSubtasks}
+               expandedTasks={expandedTasks}
+               onToggleSubtaskExpand={toggleSubtaskExpand}
+               onTaskDragStart={handleTaskDragStart}
+               onTaskDrop={handleTaskDrop}
               // Inline task creation
               isCreatingTask={isCreatingTask}
               newTaskTitle={newTaskTitle}
@@ -929,7 +930,7 @@ export default function ProjectDetailPage() {
             projectId={projectId}
             workspaceId={project.workspaceId}
             userId={firebaseUser?.uid || "demo"}
-            members={members}
+            members={assignableMembers}
             memberMap={memberMap}
             open={showDetailModal}
             onOpenChange={(open) => { setShowDetailModal(open); if (!open) setDetailTask(null); }}

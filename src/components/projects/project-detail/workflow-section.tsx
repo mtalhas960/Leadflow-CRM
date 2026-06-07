@@ -508,7 +508,7 @@ export default function WorkflowSection({
                             {ms.description && <p className="text-xs text-muted-foreground truncate">{ms.description}</p>}
                           </div>
                         </div>
-                        <div className="flex items-center gap-3 shrink-0">
+                        <div className="flex items-center gap-2 shrink-0">
                           {/* Milestone due date */}
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
                             <Calendar className="h-3 w-3" />
@@ -552,9 +552,11 @@ export default function WorkflowSection({
 
                       {/* Nested tasks inside milestone */}
                       {isExpanded && (nestedTasks.length > 0 || (isCreatingNestedTask && nestedMilestoneId === ms.id)) && (
-                        <div className="ml-12 mt-1.5 space-y-1.5 border-l-2 border-border pl-4">
+                        <div className="ml-1 mt-1.5 space-y-1.5 pl-4">
                           {nestedTasks.map((task) => (
-                            <TaskCard key={task.id} task={task} memberMap={memberMap} onToggleComplete={onToggleTaskComplete} onStatusChange={onTaskStatusChange} onDelete={onDeleteTask} onTitleChange={onTitleChange} onAssigneeChange={onAssigneeChange} onDueDateChange={onDueDateChange} members={taskMembers} isSubtask onOpenDetail={onOpenTaskDetail} />
+                            <TaskCard key={task.id} task={task} memberMap={memberMap} onToggleComplete={onToggleTaskComplete} onStatusChange={onTaskStatusChange} onDelete={onDeleteTask} onTitleChange={onTitleChange} onAssigneeChange={onAssigneeChange} onDueDateChange={onDueDateChange} members={taskMembers} isSubtask onOpenDetail={onOpenTaskDetail}
+                            className="px-2"
+                            />
                           ))}
                           {isCreatingNestedTask && nestedMilestoneId === ms.id && (
                             <InlineTaskCreator
