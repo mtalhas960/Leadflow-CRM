@@ -50,6 +50,8 @@ const navItems: { href: string; label: string; icon: typeof LayoutDashboard; mod
   // 2. Leads — people/contacts (core CRM)
   { href: "/leads", label: "Leads", icon: Users, moduleId: "leads" },
   // 3. Pipeline — deal tracking (commented out for later)
+  { href: "/clients", label: "Clients", icon: UserCheck, moduleId: "clients" },
+
   // 4. Projects — work delivery
   { href: "/projects", label: "Projects", icon: FolderKanban, moduleId: "projects" },
   // 5. Invoices — billing & revenue
@@ -63,7 +65,6 @@ const navItems: { href: string; label: string; icon: typeof LayoutDashboard; mod
   // 9. Time Tracker — resource tracking
   { href: "/time-tracker", label: "Time Tracker", icon: Clock, moduleId: "time_tracker" },
   // 10. Clients — agency client management
-  { href: "/clients", label: "Clients", icon: UserCheck, moduleId: "clients" },
   // 11. Settings — always last
   { href: "/settings", label: "Settings", icon: Settings, moduleId: "settings" },
 ];
