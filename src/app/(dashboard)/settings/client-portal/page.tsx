@@ -119,6 +119,7 @@ const DEFAULT_FORM: PortalSettingsForm = {
     meetings: true,
     invoices: true,
     documents: true,
+    contracts: true,
     time_tracking: true,
     project_requests: true,
   },

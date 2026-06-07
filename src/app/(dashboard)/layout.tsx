@@ -54,6 +54,7 @@ const navItems: { href: string; label: string; icon: typeof LayoutDashboard; mod
   { href: "/messages", label: "Messages", icon: MessageSquare, moduleId: "messages" },
   { href: "/invoices", label: "Invoices", icon: FileText, moduleId: "invoices" },
   { href: "/documents", label: "Documents", icon: File, moduleId: "documents" },
+  { href: "/contracts", label: "Contracts", icon: FileText, moduleId: "contracts" },
   { href: "/clients", label: "Clients", icon: UserCheck, moduleId: "clients" },
   { href: "/settings", label: "Settings", icon: Settings, moduleId: "settings" },
 ];

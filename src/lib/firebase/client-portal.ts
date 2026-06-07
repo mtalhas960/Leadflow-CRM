@@ -42,6 +42,7 @@ export async function getClientPortalSettings(
       meetings: true,
       invoices: true,
       documents: true,
+      contracts: true,
       time_tracking: true,
       project_requests: true,
     },

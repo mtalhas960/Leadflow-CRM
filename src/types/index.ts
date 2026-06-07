@@ -96,6 +96,7 @@ export type ModuleId =
   | "automations"
   | "meetings"
   | "documents"
+  | "contracts"
   | "invoices"
   | "settings"
   | "clients"
@@ -120,6 +121,7 @@ export const MODULE_LABELS: Record<ModuleId, string> = {
   meetings: "Meetings",
   invoices: "Invoices",
   documents: "Documents",
+  contracts: "Contracts",
   settings: "Settings",
   clients: "Clients",
   projects: "Projects",
@@ -136,6 +138,7 @@ export const DEFAULT_MEMBER_PERMISSIONS: ModulePermissionsMap = {
   meetings: true,
   invoices: true,
   documents: true,
+  contracts: true,
   settings: true,
   clients: false,
   projects: true,
@@ -152,6 +155,7 @@ export const DEFAULT_VIEWER_PERMISSIONS: ModulePermissionsMap = {
   meetings: false,
   invoices: true,
   documents: true,
+  contracts: true,
   settings: true,
   clients: true,
   projects: true,
@@ -168,6 +172,7 @@ export const DEFAULT_CLIENT_PERMISSIONS: ModulePermissionsMap = {
   meetings: false,
   invoices: false,
   documents: false,
+  contracts: false,
   settings: false,
   clients: false,
   projects: false,
@@ -276,6 +281,87 @@ export interface Document {
   cloudinaryResourceType: string;
   uploadedBy: string;
   createdAt: Timestamp;
+}
+
+// ─── Contract & eSignatures ──────────────────────────────────────────────────
+
+export type ContractStatus = "draft" | "sent" | "signed" | "rejected" | "cancelled" | "terminated";
+export type ContractType = "contract" | "proposal";
+export type SignerStatus = "pending" | "sent" | "viewed" | "signed" | "rejected";
+export type SignerType = "owner" | "signer";
+
+export interface ContractSignerField {
+  signature?: string;
+  date?: string;
+  initials?: string;
+  checkbox?: string;
+}
+
+export interface ContractSigner {
+  id: string;
+  email: string;
+  name: string;
+  title: string;
+  type: SignerType;
+  status: SignerStatus;
+  required: boolean;
+  selectedFields?: ContractSignerField;
+  signedAt?: Timestamp;
+}
+
+export interface ContractActivity {
+  id?: string;
+  type: "created" | "sent" | "viewed" | "signed" | "rejected" | "cancelled" | "terminated";
+  userId: string;
+  userName: string;
+  timestamp: Timestamp;
+  details?: string;
+}
+
+export interface ContractAttachment {
+  id?: string;
+  fileName: string;
+  fileUrl: string;
+  fileType: string;
+  fileSize: number;
+  uploadedAt: Timestamp;
+  uploadedBy: string;
+}
+
+export interface Contract {
+  id: string;
+  workspaceId: string;
+  contractTitle: string;
+  type: ContractType;
+  status: ContractStatus;
+  content: string;
+  clientId: string | null;
+  projectId: string | null;
+  signers: ContractSigner[];
+  activities: ContractActivity[];
+  attachments: ContractAttachment[];
+  signatures: Array<{
+    signer: string;
+    signature: string;
+    signedAt: Timestamp;
+  }>;
+  dateSent: Timestamp | null;
+  dateSigned: Timestamp | null;
+  createdBy: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+
+export interface ContractTemplate {
+  id: string;
+  workspaceId: string;
+  templateTitle: string;
+  templateDescription: string;
+  type: ContractType;
+  content: string;
+  status: ContractStatus;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
 }
 
 // ─── Activity ────────────────────────────────────────────────────────────────
@@ -1086,6 +1172,7 @@ export interface ClientPortalSettings {
     meetings: boolean;
     invoices: boolean;
     documents: boolean;
+    contracts: boolean;
     time_tracking: boolean;
     project_requests: boolean;
   };
@@ -1158,6 +1245,7 @@ export const DEFAULT_CLIENT_PORTAL_SETTINGS: Partial<ClientPortalSettings> & { e
     meetings: true,
     invoices: true,
     documents: true,
+    contracts: true,
     time_tracking: false,
     project_requests: true,
   },

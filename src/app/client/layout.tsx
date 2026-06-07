@@ -59,6 +59,7 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { href: "/client/messages", label: "Messages", icon: MessageSquare, moduleKey: "messages" },
   { href: "/client/meetings", label: "Meetings", icon: Calendar, moduleKey: "meetings" },
   { href: "/client/invoices", label: "Invoices", icon: FileText, moduleKey: "invoices" },
+  { href: "/client/contracts", label: "Contracts", icon: FileText, moduleKey: "contracts" },
   { href: "/client/documents", label: "Documents", icon: File, moduleKey: "documents" },
   { href: "/client/settings", label: "Settings", icon: Settings },
 ];

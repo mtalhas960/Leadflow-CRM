@@ -17,6 +17,9 @@ import type {
   InvoiceLineItem,
   InvoiceDiscount,
   Document,
+  Contract,
+  ContractTemplate,
+  ContractSigner,
   PipelineStage,
 } from "@/types";
 
@@ -765,6 +768,8 @@ export class DemoStore {
   meetings: Meeting[] = [...DEMO_MEETINGS];
   private _documents: Document[] = [...DEMO_DOCUMENTS];
   private _invoices: Invoice[] = [...DEMO_INVOICES];
+  private _contracts: Contract[] = [];
+  private _templates: ContractTemplate[] = [];
 
   private _convMessageIndex: Map<string, Message[]> = new Map();
   private _notifListeners: Set<(notifications: Notification[]) => void> = new Set();
@@ -1658,6 +1663,138 @@ export class DemoStore {
     for (const cb of this._notifListeners) {
       cb([...this.notifications]);
     }
+  }
+
+  // ── Contract Operations ──
+
+  getContracts(): Contract[] {
+    return [...this._contracts];
+  }
+
+  getContract(id: string): Contract | null {
+    return this._contracts.find((c) => c.id === id) ?? null;
+  }
+
+  createContract(
+    workspaceId: string,
+    data: {
+      contractTitle: string;
+      type: "contract" | "proposal";
+      content?: string;
+      clientId?: string | null;
+      projectId?: string | null;
+      signers?: ContractSigner[];
+    }
+  ): string {
+    const id = `demo-contract-${Date.now()}`;
+    const contract: Contract = {
+      id,
+      workspaceId,
+      contractTitle: data.contractTitle,
+      type: data.type || "contract",
+      status: "draft",
+      content: data.content || "",
+      clientId: data.clientId || null,
+      projectId: data.projectId || null,
+      signers: data.signers || [],
+      activities: [
+        {
+          type: "created",
+          userId: DEMO_USER_ID,
+          userName: "Demo User",
+          timestamp: Timestamp.now(),
+        },
+      ],
+      attachments: [],
+      signatures: [],
+      dateSent: null,
+      dateSigned: null,
+      createdBy: DEMO_USER_ID,
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+    };
+    this._contracts.unshift(contract);
+    return id;
+  }
+
+  updateContract(id: string, data: Partial<Contract>): void {
+    const idx = this._contracts.findIndex((c) => c.id === id);
+    if (idx !== -1) {
+      this._contracts[idx] = { ...this._contracts[idx], ...data, updatedAt: Timestamp.now() };
+    }
+  }
+
+  deleteContract(id: string): void {
+    this._contracts = this._contracts.filter((c) => c.id !== id);
+  }
+
+  signContract(contractId: string, signerId: string, signature: string): void {
+    const contract = this._contracts.find((c) => c.id === contractId);
+    if (!contract) return;
+
+    const updatedSigners = contract.signers.map((s) =>
+      s.id === signerId ? { ...s, status: "signed" as const, signedAt: Timestamp.now() } : s
+    );
+
+    const allSigned = updatedSigners.every((s) => s.status === "signed");
+
+    contract.signers = updatedSigners;
+    contract.signatures = [
+      ...(contract.signatures || []),
+      { signer: signerId, signature, signedAt: Timestamp.now() },
+    ];
+    contract.updatedAt = Timestamp.now();
+
+    if (allSigned) {
+      contract.status = "signed";
+      contract.dateSigned = Timestamp.now();
+    }
+  }
+
+  // ── Template Operations ──
+
+  getTemplates(): ContractTemplate[] {
+    return [...this._templates];
+  }
+
+  getTemplate(id: string): ContractTemplate | null {
+    return this._templates.find((t) => t.id === id) ?? null;
+  }
+
+  createTemplate(
+    workspaceId: string,
+    data: {
+      templateTitle: string;
+      templateDescription?: string;
+      type: "contract" | "proposal";
+      content?: string;
+    }
+  ): string {
+    const id = `demo-template-${Date.now()}`;
+    const template: ContractTemplate = {
+      id,
+      workspaceId,
+      templateTitle: data.templateTitle,
+      templateDescription: data.templateDescription || "",
+      type: data.type || "contract",
+      content: data.content || "",
+      status: "draft",
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+    };
+    this._templates.unshift(template);
+    return id;
+  }
+
+  updateTemplate(id: string, data: Partial<ContractTemplate>): void {
+    const idx = this._templates.findIndex((t) => t.id === id);
+    if (idx !== -1) {
+      this._templates[idx] = { ...this._templates[idx], ...data, updatedAt: Timestamp.now() };
+    }
+  }
+
+  deleteTemplate(id: string): void {
+    this._templates = this._templates.filter((t) => t.id !== id);
   }
 }
 
