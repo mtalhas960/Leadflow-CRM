@@ -39,7 +39,7 @@ import {
   Trash2,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -100,7 +100,12 @@ const DEFAULT_TERMS = 30; // days
 
 export default function NewInvoicePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { activeWorkspace, user } = useWorkspace();
+
+  // ── Pre-fill from URL params (when coming from project page) ────────────────
+  const prefillClientId = searchParams.get("clientId") || "";
+  const prefillProjectId = searchParams.get("projectId") || "";
 
   // ── Data ────────────────────────────────────────────────────────────────────
   const [clients, setClients] = useState<WorkspaceMember[]>([]);
@@ -112,8 +117,8 @@ export default function NewInvoicePage() {
   const [invoiceNumber, setInvoiceNumber] = useState("");
 
   // ── Form state ──────────────────────────────────────────────────────────────
-  const [clientId, setClientId] = useState("");
-  const [projectId, setProjectId] = useState("");
+  const [clientId, setClientId] = useState(prefillClientId);
+  const [projectId, setProjectId] = useState(prefillProjectId);
   const [issueDate, setIssueDate] = useState(toDateInputValue(new Date()));
   const [dueDate, setDueDate] = useState(toDateInputValue(addDays(new Date(), DEFAULT_TERMS)));
   const [notes, setNotes] = useState("");
