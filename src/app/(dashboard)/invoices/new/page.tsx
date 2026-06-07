@@ -607,7 +607,7 @@ export default function NewInvoicePage() {
                           <Input
                             type="number"
                             min="1"
-                            placeholder="Qty"
+                            placeholder={invoiceType === "hourly" ? "Hours" : "Qty"}
                             value={item.quantity}
                             onChange={(e) => updateLineItem(index, "quantity", parseInt(e.target.value) || 0)}
                             className="text-sm"
@@ -618,7 +618,7 @@ export default function NewInvoicePage() {
                             type="number"
                             min="0"
                             step="0.01"
-                            placeholder="Unit price"
+                            placeholder={invoiceType === "hourly" ? "Rate" : "Unit price"}
                             value={item.unitPrice}
                             onChange={(e) => updateLineItem(index, "unitPrice", parseFloat(e.target.value) || 0)}
                             className="text-sm"
