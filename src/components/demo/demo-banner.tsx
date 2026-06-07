@@ -24,7 +24,7 @@ export function DemoBanner() {
             Demo mode - data not saved.
           </span>
           <a
-            href="https://github.com/Tabish5858/leadflow"
+            href="https://github.com/Tabish5858/Leadflow-CRM"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 font-medium text-amber-600 dark:text-amber-400 underline underline-offset-2 hover:text-amber-700 dark:hover:text-amber-300"

@@ -127,7 +127,7 @@ export default function LandingPage() {
             <a className="hover:text-foreground transition-colors" href="#open-source">Open Source</a>
             <a className="hover:text-foreground transition-colors" href="#testimonials">Testimonials</a>
             <a
-              href="https://github.com/Tabish5858/leadflow-crm"
+              href="https://github.com/Tabish5858/Leadflow-CRM"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 hover:text-foreground transition-colors"
@@ -192,7 +192,7 @@ export default function LandingPage() {
                 Try Live Demo - No Signup
               </Button>
               <Button asChild variant="outline" size="lg" className="gap-2 text-base h-12 px-6">
-                <a href="https://github.com/Tabish5858/leadflow-crm" target="_blank" rel="noopener noreferrer">
+                <a href="https://github.com/Tabish5858/Leadflow-CRM" target="_blank" rel="noopener noreferrer">
                   <Github className="h-5 w-5" />
                   View on GitHub
                   <ExternalLink className="h-3.5 w-3.5 opacity-60" />
@@ -291,13 +291,13 @@ export default function LandingPage() {
                 </div>
                 <div className="flex gap-3 pt-2">
                   <Button asChild variant="outline" className="gap-2">
-                    <a href="https://github.com/Tabish5858/leadflow-crm" target="_blank" rel="noopener noreferrer">
+                    <a href="https://github.com/Tabish5858/Leadflow-CRM" target="_blank" rel="noopener noreferrer">
                       <Github className="h-4 w-4" />
                       GitHub Repository
                     </a>
                   </Button>
                   <Button asChild variant="ghost" className="gap-2">
-                    <a href="https://github.com/Tabish5858/leadflow-crm/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">
+                    <a href="https://github.com/Tabish5858/Leadflow-CRM/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">
                       MIT License
                       <ExternalLink className="h-3.5 w-3.5" />
                     </a>
@@ -378,7 +378,7 @@ export default function LandingPage() {
                 Launch Demo
               </Button>
               <Button asChild variant="outline" size="lg" className="gap-2 text-base h-12 px-6">
-                <a href="https://github.com/Tabish5858/leadflow-crm" target="_blank" rel="noopener noreferrer">
+                <a href="https://github.com/Tabish5858/Leadflow-CRM" target="_blank" rel="noopener noreferrer">
                   <Github className="h-5 w-5" />
                   Star on GitHub
                 </a>
@@ -404,7 +404,7 @@ export default function LandingPage() {
           </div>
           <div className="flex flex-wrap items-center gap-4 text-muted-foreground">
             <a
-              href="https://github.com/Tabish5858/leadflow-crm"
+              href="https://github.com/Tabish5858/Leadflow-CRM"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 hover:text-foreground transition-colors"

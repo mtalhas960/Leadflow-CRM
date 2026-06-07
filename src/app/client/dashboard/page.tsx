@@ -2,8 +2,10 @@
 
 import { ActionItemsCard } from "@/components/client/action-items-card";
 import { ChecklistCard } from "@/components/client/checklist-card";
+import { ContractsWidget } from "@/components/client/contracts-widget";
 import { HelpfulFilesCard } from "@/components/client/helpful-files-card";
 import { HelpfulLinksCard } from "@/components/client/helpful-links-card";
+import { InvoicesWidget } from "@/components/client/invoices-widget";
 import { MeetingsWidget } from "@/components/client/meetings-widget";
 import { MessagesWidget } from "@/components/client/messages-widget";
 import { ProjectsWidget } from "@/components/client/projects-widget";
@@ -100,6 +102,8 @@ export default function ClientDashboardPage() {
   const showProjects = settings?.modules?.projects ?? true;
   const showMessages = settings?.modules?.messages ?? true;
   const showMeetings = settings?.modules?.meetings ?? true;
+  const showInvoices = settings?.modules?.invoices ?? true;
+  const showContracts = settings?.modules?.contracts ?? true;
 
   return (
     <div className="space-y-6">
@@ -135,6 +139,20 @@ export default function ClientDashboardPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {showProjects && (
           <ProjectsWidget
+            workspaceId={clientWorkspaceId}
+            userId={uid}
+          />
+        )}
+
+        {showInvoices && (
+          <InvoicesWidget
+            workspaceId={clientWorkspaceId}
+            userId={uid}
+          />
+        )}
+
+        {showContracts && (
+          <ContractsWidget
             workspaceId={clientWorkspaceId}
             userId={uid}
           />

@@ -7,7 +7,7 @@ Thank you for your interest in contributing to LeadFlow! We welcome all contribu
 1. **Fork** the repository on GitHub
 2. **Clone** your fork locally
    ```bash
-   git clone https://github.com/Tabish5858/leadflow-crm.git
+   git clone https://github.com/Tabish5858/Leadflow-CRM.git
    cd leadflow-crm
    ```
 3. **Set up** the project
@@ -30,12 +30,12 @@ Thank you for your interest in contributing to LeadFlow! We welcome all contribu
 
 ## Branch Naming
 
-| Type | Format | Example |
-|------|--------|---------|
-| Feature | `feature/description` | `feature/lead-export-csv` |
-| Bug Fix | `fix/description` | `fix/kanban-drag-drop` |
-| Chore | `chore/description` | `chore/update-dependencies` |
-| Docs | `docs/description` | `docs/add-setup-guide` |
+| Type     | Format                 | Example                      |
+| -------- | ---------------------- | ---------------------------- |
+| Feature  | `feature/description`  | `feature/lead-export-csv`    |
+| Bug Fix  | `fix/description`      | `fix/kanban-drag-drop`       |
+| Chore    | `chore/description`    | `chore/update-dependencies`  |
+| Docs     | `docs/description`     | `docs/add-setup-guide`       |
 | Refactor | `refactor/description` | `refactor/firestore-service` |
 
 ## Commit Messages
@@ -53,6 +53,7 @@ We follow [Conventional Commits](https://www.conventionalcommits.org/):
 **Types:** `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `perf`
 
 **Examples:**
+
 - `feat(leads): add bulk delete action`
 - `fix(pipeline): resolve drag-drop state sync`
 - `docs(readme): update installation steps`
@@ -98,7 +99,7 @@ feature/*  fix/*  chore/*  (work branches)
 
 ## Questions?
 
-- Open a [Discussion](https://github.com/Tabish5858/leadflow-crm/discussions) for general questions
+- Open a [Discussion](https://github.com/Tabish5858/Leadflow-CRM/discussions) for general questions
 - Tag `@Tabish5858` in issues for maintainer attention
 
 ## License

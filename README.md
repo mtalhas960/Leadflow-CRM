@@ -155,7 +155,7 @@ The demo is pre-loaded with sample data so you can test every feature immediatel
 
 ```bash
 # Clone the repo
-git clone https://github.com/Tabish5858/leadflow-crm.git
+git clone https://github.com/Tabish5858/Leadflow-CRM.git
 cd leadflow-crm/leadflow
 
 # Install dependencies
@@ -314,13 +314,13 @@ The scoring engine computes a 0-100 score per lead:
 
 LeadFlow follows defense-in-depth security practices:
 
-| Layer              | Protection                                                                                                                        |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
-| **Edge**           | Cloudflare WAF (OWASP Core Ruleset, rate limiting, bot management, DDoS protection)                                               |
-| **Database**       | Firestore security rules with role-based -ss -`canWrite()`, `getWorkspaceRole()`, `canManageWorkspace()`, owner-only operations |
-| **Application**    | Server Action re-authorization, Admin SDK confined to API routes, `server-only` guards on data access, input validation with Zod  |
-| **Authentication** | Firebase Auth with optional MFA, custom password reset tokens (1hr expiry), rate-limited invite acceptance                        |
-| **Audit**          | Full audit trail (who, what, when) on all mutations                                                                               |
+| Layer              | Protection                                                                                                                       |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| **Edge**           | Cloudflare WAF (OWASP Core Ruleset, rate limiting, bot management, DDoS protection)                                              |
+| **Database**       | Firestore security rules with role-based -ss -`canWrite()`, `getWorkspaceRole()`, `canManageWorkspace()`, owner-only operations  |
+| **Application**    | Server Action re-authorization, Admin SDK confined to API routes, `server-only` guards on data access, input validation with Zod |
+| **Authentication** | Firebase Auth with optional MFA, custom password reset tokens (1hr expiry), rate-limited invite acceptance                       |
+| **Audit**          | Full audit trail (who, what, when) on all mutations                                                                              |
 
 ---
 
@@ -345,7 +345,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.
 
 Workflow: Fork, branch from `develop`, conventional commits, PR to `develop`.
 
-Open issues: [github.com/Tabish5858/leadflow-crm/issues](https://github.com/Tabish5858/leadflow-crm/issues)
+Open issues: [github.com/Tabish5858/leadflow-crm/issues](https://github.com/Tabish5858/Leadflow-CRM/issues)
 
 ### Priority Contribution Areas
 
