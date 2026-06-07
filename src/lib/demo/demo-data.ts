@@ -98,6 +98,53 @@ export const DEMO_WORKSPACE: Workspace = {
   pipeline: { stages: DEMO_PIPELINE_STAGES },
   customFields: [],
   niches: ["SaaS", "Enterprise", "Consulting"],
+  modulePermissions: {
+    member: {
+      dashboard: true,
+      leads: true,
+      pipeline: true,
+      analytics: true,
+      time_tracker: true,
+      messages: true,
+      automations: false,
+      meetings: true,
+      invoices: true,
+      contracts: true,
+      settings: true,
+      clients: false,
+      projects: true,
+    },
+    viewer: {
+      dashboard: true,
+      leads: true,
+      pipeline: false,
+      analytics: true,
+      time_tracker: false,
+      messages: false,
+      automations: false,
+      meetings: false,
+      invoices: true,
+      contracts: true,
+      settings: true,
+      clients: true,
+      projects: true,
+    },
+    client: {
+      dashboard: true,
+      leads: false,
+      pipeline: false,
+      analytics: false,
+      time_tracker: false,
+      messages: true,
+      automations: false,
+      meetings: false,
+      invoices: false,
+      contracts: false,
+      settings: false,
+      clients: false,
+      projects: true,
+    },
+  },
   createdAt: daysAgo(90),
   updatedAt: now,
   ownerId: DEMO_USER_ID,
@@ -837,6 +884,65 @@ const DEMO_TEMPLATES: ContractTemplate[] = [
   },
 ];
 
+// ─── Demo Project Deliverables ─────────────────────────────────────────────────
+
+const DEMO_PROJECT_DELIVERABLES: Record<string, unknown>[] = [
+  {
+    id: "demo-deliverable-001",
+    projectId: "demo-project-001",
+    workspaceId: DEMO_WORKSPACE_ID,
+    title: "Homepage Mockup v2",
+    description: "Updated homepage design with new hero section and CTA buttons.",
+    type: "design",
+    status: "in_review",
+    version: 2,
+    uploadedBy: "demo-user-001",
+    uploadedByName: "Sarah Chen",
+    fileUrl: "https://res.cloudinary.com/demo/image/upload/v1/mockups/homepage-v2.png",
+    fileName: "homepage-mockup-v2.png",
+    fileSize: 2450000,
+    fileType: "image/png",
+    createdAt: daysAgo(3),
+    updatedAt: daysAgo(1),
+  },
+  {
+    id: "demo-deliverable-002",
+    projectId: "demo-project-001",
+    workspaceId: DEMO_WORKSPACE_ID,
+    title: "Brand Style Guide",
+    description: "Complete brand guidelines including typography, colors, and logo usage.",
+    type: "document",
+    status: "approved",
+    version: 1,
+    uploadedBy: "demo-user-001",
+    uploadedByName: "Sarah Chen",
+    fileUrl: "https://res.cloudinary.com/demo/image/upload/v1/docs/brand-guide.pdf",
+    fileName: "brand-style-guide.pdf",
+    fileSize: 5800000,
+    fileType: "application/pdf",
+    createdAt: daysAgo(10),
+    updatedAt: daysAgo(10),
+  },
+  {
+    id: "demo-deliverable-003",
+    projectId: "demo-project-002",
+    workspaceId: DEMO_WORKSPACE_ID,
+    title: "Analytics Dashboard Wireframe",
+    description: "Initial wireframes for the analytics dashboard with 5 key metric cards.",
+    type: "design",
+    status: "draft",
+    version: 1,
+    uploadedBy: "demo-user-002",
+    uploadedByName: "Mike Chen",
+    fileUrl: "https://res.cloudinary.com/demo/image/upload/v1/wireframes/analytics-wf.png",
+    fileName: "analytics-wireframe.png",
+    fileSize: 1800000,
+    fileType: "image/png",
+    createdAt: daysAgo(5),
+    updatedAt: daysAgo(5),
+  },
+];
+
 // ─── Mutable Store (for writes in demo mode) ──────────────────────────────────
 
 /**
@@ -853,6 +959,7 @@ export class DemoStore {
   private _invoices: Invoice[] = [...DEMO_INVOICES];
   private _contracts: Contract[] = [...DEMO_CONTRACTS];
   private _templates: ContractTemplate[] = [...DEMO_TEMPLATES];
+  private _deliverables: Array<Record<string, unknown>> = [...DEMO_PROJECT_DELIVERABLES];
 
   private _convMessageIndex: Map<string, Message[]> = new Map();
   private _notifListeners: Set<(notifications: Notification[]) => void> = new Set();
@@ -1681,6 +1788,37 @@ export class DemoStore {
 
   deleteTimeEntry(id: string): void {
     this.timeEntries = this.timeEntries.filter((e) => e.id !== id);
+  }
+
+  // ── Project Deliverables Operations ──
+
+  getProjectDeliverables(projectId: string): Array<Record<string, unknown>> {
+    return this._deliverables.filter((d) => d.projectId === projectId);
+  }
+
+  addProjectDeliverable(data: Record<string, unknown>): string {
+    const id = `demo-deliverable-${Date.now()}`;
+    this._deliverables.push({ id, ...data, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+    return id;
+  }
+
+  updateProjectDeliverable(id: string, data: Record<string, unknown>): void {
+    const idx = this._deliverables.findIndex((d) => d.id === id);
+    if (idx !== -1) this._deliverables[idx] = { ...this._deliverables[idx], ...data, updatedAt: new Date().toISOString() };
+  }
+
+  deleteProjectDeliverable(id: string): void {
+    this._deliverables = this._deliverables.filter((d) => d.id !== id);
+  }
+
+  // ── Spreadsheet Operations ──
+
+  // Spreadsheets require the full UniverJS data model which is too complex to mock.
+  // Returns an empty array; the UI shows an empty state with a note for demo mode.
+  private _spreadsheets: Array<Record<string, unknown>> = [];
+
+  getSpreadsheets(): Array<Record<string, unknown>> {
+    return [...this._spreadsheets];
   }
 
   // ── Notification Operations ──

@@ -28,6 +28,8 @@ import {
   Menu,
   MessageSquare,
   Moon,
+  PenTool,
+  Receipt,
   Settings,
   Sun,
   X,
@@ -44,6 +46,7 @@ interface ClientUser {
   photoURL: string | null;
   clientWorkspaceId: string;
   workspaceName: string;
+  workspaceLogo: string | null;
 }
 
 interface NavItem {
@@ -59,9 +62,9 @@ const ALL_NAV_ITEMS: NavItem[] = [
   // 2. Projects — work delivery
   { href: "/client/projects", label: "Projects", icon: FolderKanban, moduleKey: "projects" },
   // 3. Invoices — billing
-  { href: "/client/invoices", label: "Invoices", icon: FileText, moduleKey: "invoices" },
+  { href: "/client/invoices", label: "Invoices", icon: Receipt, moduleKey: "invoices" },
   // 4. Contracts — legal agreements
-  { href: "/client/contracts", label: "Contracts", icon: FileText, moduleKey: "contracts" },
+  { href: "/client/contracts", label: "Contracts", icon: PenTool, moduleKey: "contracts" },
   // 5. Meetings — scheduling
   { href: "/client/meetings", label: "Meetings", icon: Calendar, moduleKey: "meetings" },
   // 6. Messages — communication
@@ -194,6 +197,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
         photoURL: null,
         clientWorkspaceId: "preview",
         workspaceName: "Workspace (Preview)",
+        workspaceLogo: null,
       });
       setPortalSettings(previewSettings || (DEFAULT_CLIENT_PORTAL_SETTINGS as ClientPortalSettings));
       setLoading(false);
@@ -237,6 +241,9 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
         const workspaceName = workspaceSnap.exists()
           ? (workspaceSnap.data().name || "Workspace")
           : "Workspace";
+        const workspaceLogo = workspaceSnap.exists()
+          ? (workspaceSnap.data().logoUrl || null)
+          : null;
 
         if (settingsSnap.exists()) {
           setPortalSettings(settingsSnap.data() as ClientPortalSettings);
@@ -251,6 +258,7 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
           photoURL: userData.photoURL || firebaseUser.photoURL || null,
           clientWorkspaceId,
           workspaceName,
+          workspaceLogo,
         });
       } catch {
         router.push("/login");
@@ -368,9 +376,12 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
             )}
           >
             <div className="flex items-center gap-3 min-w-0">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/70 text-primary-foreground font-bold text-sm shadow-sm">
-                LF
-              </div>
+              <Avatar className="h-8 w-8 shrink-0 rounded-lg">
+                <AvatarImage src={clientUser.workspaceLogo || undefined} />
+                <AvatarFallback className="rounded-lg bg-gradient-to-br from-primary to-primary/70 text-primary-foreground font-bold text-sm">
+                  {(clientUser.workspaceName || "LF").slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
               {!sidebarCollapsed && (
                 <span className="text-lg font-bold tracking-tight truncate">
                   {clientUser.workspaceName}

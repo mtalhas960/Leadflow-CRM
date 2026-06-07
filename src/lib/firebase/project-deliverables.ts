@@ -30,6 +30,11 @@ import type {
 
 const COLLECTION = "project_deliverables";
 
+function isDemo(): boolean {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem("leadflow_demo_mode") === "true";
+}
+
 // ─── CRUD ────────────────────────────────────────────────────────────────────
 
 export async function createDeliverable(
@@ -118,6 +123,10 @@ export async function getDeliverable(id: string): Promise<Deliverable | null> {
 }
 
 export async function getProjectDeliverables(projectId: string): Promise<Deliverable[]> {
+  if (isDemo()) {
+    const { demoStore } = await import("@/lib/demo/demo-data");
+    return demoStore.getProjectDeliverables(projectId) as unknown as Deliverable[];
+  }
   const q = query(
     collection(db, COLLECTION),
     where("projectId", "==", projectId),

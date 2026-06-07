@@ -3,6 +3,7 @@
 import { RequireModuleAccess } from "@/components/shared/require-module-access";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { ImageUpload } from "@/components/ui/image-upload";
 import {
   Card,
   CardContent,
@@ -559,7 +560,7 @@ export default function SettingsPage() {
                   </p>
                 </div>
 
-                {/* Photo URL */}
+                {/* Photo URL + Upload */}
                 <div className="space-y-2 max-w-md">
                   <Label htmlFor="profile-photo">Photo URL</Label>
                   <div className="flex gap-2">
@@ -570,8 +571,15 @@ export default function SettingsPage() {
                       placeholder="https://example.com/avatar.jpg"
                     />
                   </div>
+                  <ImageUpload
+                    currentUrl={profilePhotoURL || null}
+                    endpoint="/api/upload/avatar"
+                    onUploaded={(url) => setProfilePhotoURL(url)}
+                    label="Upload Photo"
+                    className="mt-2"
+                  />
                   <p className="text-xs text-muted-foreground">
-                    Provide a URL to your profile image. Leave empty to show initials.
+                    Upload an image or provide a URL. Leave empty to show initials.
                   </p>
                 </div>
 
@@ -608,6 +616,42 @@ export default function SettingsPage() {
         {/* Workspace Tab */}
         {activeTab === "workspace" && (
           <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Workspace Logo</CardTitle>
+                <CardDescription>
+                  Upload a logo for your workspace. Shown in the sidebar and across the app.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-20 w-20 border-2 rounded-lg">
+                    <AvatarImage src={activeWorkspace?.logoUrl || undefined} />
+                    <AvatarFallback className="text-2xl bg-primary/10 text-primary rounded-lg">
+                      {(activeWorkspace?.name || "W").slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <ImageUpload
+                    currentUrl={activeWorkspace?.logoUrl || null}
+                    endpoint="/api/upload/workspace-logo"
+                    onUploaded={async (url) => {
+                      if (!activeWorkspace) return;
+                      try {
+                        await import("@/lib/firebase/workspaces").then((m) =>
+                          m.updateWorkspace(activeWorkspace.id, { logoUrl: url || null })
+                        );
+                        await refreshWorkspaces();
+                        toast.success(url ? "Logo updated" : "Logo removed");
+                      } catch {
+                        toast.error("Failed to save logo");
+                      }
+                    }}
+                    label="Upload Logo"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <CardTitle>Workspace Name</CardTitle>

@@ -1,11 +1,13 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useDemoMode } from "@/lib/demo/demo-context";
-import { ExternalLink, LogOut, AlertTriangle } from "lucide-react";
+import { ExternalLink, LogOut, AlertTriangle, Users } from "lucide-react";
 
 export function DemoBanner() {
   const { isDemoMode, exitDemo } = useDemoMode();
+  const router = useRouter();
 
   if (!isDemoMode) return null;
 
@@ -31,15 +33,26 @@ export function DemoBanner() {
             <ExternalLink className="h-3 w-3" />
           </a>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={exitDemo}
-          className="shrink-0 gap-1.5 text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 hover:bg-amber-500/10"
-        >
-          <LogOut className="h-3.5 w-3.5" />
-          Exit Demo
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push("/client/dashboard")}
+            className="shrink-0 gap-1.5 border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 hover:text-amber-700 dark:hover:text-amber-300"
+          >
+            <Users className="h-3.5 w-3.5" />
+            Enter Client Demo
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={exitDemo}
+            className="shrink-0 gap-1.5 text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 hover:bg-amber-500/10"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            Exit Demo
+          </Button>
+        </div>
       </div>
     </div>
   );

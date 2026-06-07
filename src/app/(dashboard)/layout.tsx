@@ -32,6 +32,8 @@ import {
   Menu,
   MessageSquare,
   Moon,
+  PenTool,
+  Receipt,
   Settings,
   Sun,
   UserCheck,
@@ -55,9 +57,9 @@ const navItems: { href: string; label: string; icon: typeof LayoutDashboard; mod
   // 4. Projects — work delivery
   { href: "/projects", label: "Projects", icon: FolderKanban, moduleId: "projects" },
   // 5. Invoices — billing & revenue
-  { href: "/invoices", label: "Invoices", icon: FileText, moduleId: "invoices" },
+  { href: "/invoices", label: "Invoices", icon: Receipt, moduleId: "invoices" },
   // 6. Contracts — legal agreements
-  { href: "/contracts", label: "Contracts", icon: FileText, moduleId: "contracts" },
+  { href: "/contracts", label: "Contracts", icon: PenTool, moduleId: "contracts" },
   // 7. Meetings — scheduling & calendar
   { href: "/meetings", label: "Meetings", icon: Calendar, moduleId: "meetings" },
   // 8. Messages — team communication
@@ -213,9 +215,12 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
             )}
           >
             <div className="flex items-center gap-3 min-w-0">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/70 text-primary-foreground font-bold text-sm shadow-sm">
-                LF
-              </div>
+              <Avatar className="h-8 w-8 shrink-0 rounded-lg">
+                <AvatarImage src={activeWorkspace?.logoUrl || undefined} />
+                <AvatarFallback className="rounded-lg bg-gradient-to-br from-primary to-primary/70 text-primary-foreground font-bold text-sm">
+                  {(activeWorkspace?.name || "LF").slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
               {!sidebarCollapsed && (
                 <span className="text-lg font-bold tracking-tight truncate">
                   {activeWorkspace?.name || "LeadFlow"}
