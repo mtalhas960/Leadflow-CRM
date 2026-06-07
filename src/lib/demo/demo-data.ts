@@ -1620,6 +1620,13 @@ export class DemoStore {
     this._documents = this._documents.filter((d) => d.id !== id);
   }
 
+  updateDocument(id: string, data: Record<string, unknown>): void {
+    const idx = this._documents.findIndex((d) => d.id === id);
+    if (idx !== -1) {
+      this._documents[idx] = { ...this._documents[idx], ...data } as Document;
+    }
+  }
+
   // ── Time Entry Operations ──
 
   getTimeEntries(): TimeEntry[] {

@@ -4,10 +4,12 @@ import {
   getDoc,
   getDocs,
   deleteDoc,
+  updateDoc,
   query,
   where,
   orderBy,
   limit,
+  Timestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import type { Document } from "@/types";
@@ -151,6 +153,48 @@ export async function deleteDocument(
     console.error("Document delete error:", error);
     throw error;
   }
+}
+
+// ── Update (tags, category, share) ──────────────────────────────────────────
+
+export async function updateDocument(
+  documentId: string,
+  data: Partial<Pick<Document, "category" | "tags" | "sharedWith" | "projectId">>
+): Promise<void> {
+  if (isDemoMode()) {
+    const { demoStore } = await import("@/lib/demo/demo-data");
+    demoStore.updateDocument(documentId, data);
+    return;
+  }
+
+  const ref = doc(db, COLLECTION, documentId);
+  await updateDoc(ref, {
+    ...data,
+    updatedAt: Timestamp.now(),
+  });
+}
+
+export async function shareDocumentWithClients(
+  documentId: string,
+  clientIds: string[]
+): Promise<void> {
+  const docData = await getDocument(documentId);
+  if (!docData) throw new Error("Document not found");
+
+  const existing = docData.sharedWith || [];
+  const updated = [...new Set([...existing, ...clientIds])];
+  await updateDocument(documentId, { sharedWith: updated });
+}
+
+export async function removeDocumentShare(
+  documentId: string,
+  clientId: string
+): Promise<void> {
+  const docData = await getDocument(documentId);
+  if (!docData) throw new Error("Document not found");
+
+  const updated = (docData.sharedWith || []).filter((id) => id !== clientId);
+  await updateDocument(documentId, { sharedWith: updated });
 }
 
 // ── Helpers (internal) ───────────────────────────────────────────────────────

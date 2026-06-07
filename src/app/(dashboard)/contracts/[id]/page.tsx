@@ -45,6 +45,7 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import { TextStyle, FontFamily, FontSize } from "@tiptap/extension-text-style";
+import { ContractSections } from "@/components/contracts/contract-sections";
 
 // ─── Status helpers ──────────────────────────────────────────────────────────
 
@@ -182,6 +183,11 @@ function EditorToolbar({ editor }: { editor: any }) {
         action={() => editor.chain().focus().setHorizontalRule().run()}
         label="—"
       />
+      <div className="ml-auto">
+        <ContractSections
+          onInsert={(html) => editor.chain().focus().insertContent(html).run()}
+        />
+      </div>
     </div>
   );
 }

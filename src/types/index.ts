@@ -281,6 +281,13 @@ export interface Document {
   cloudinaryResourceType: string;
   uploadedBy: string;
   createdAt: Timestamp;
+  updatedAt?: Timestamp;
+  /** File category for organization */
+  category?: string;
+  /** Tags for search/filter */
+  tags?: string[];
+  /** Client IDs this document is shared with */
+  sharedWith?: string[];
 }
 
 // ─── Contract & eSignatures ──────────────────────────────────────────────────

@@ -33,6 +33,7 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import { TextStyle, FontFamily, FontSize } from "@tiptap/extension-text-style";
+import { ContractSections } from "@/components/contracts/contract-sections";
 
 // ─── Toolbar ─────────────────────────────────────────────────────────────────
 
@@ -89,6 +90,11 @@ function EditorToolbar({ editor }: { editor: any }) {
       <ToolBtn action={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive("orderedList")} label="1. List" />
       <ToolBtn action={() => editor.chain().focus().toggleBlockquote().run()} active={editor.isActive("blockquote")} label="Quote" />
       <ToolBtn action={() => editor.chain().focus().setHorizontalRule().run()} label="—" />
+      <div className="ml-auto">
+        <ContractSections
+          onInsert={(html) => editor.chain().focus().insertContent(html).run()}
+        />
+      </div>
     </div>
   );
 }

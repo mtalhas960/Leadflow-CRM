@@ -1,7 +1,14 @@
 "use client";
 
 import { useWorkspace } from "@/contexts/workspace-context";
-import { getDocuments, deleteDocument, uploadDocument } from "@/lib/firebase/documents";
+import {
+  getDocuments,
+  deleteDocument,
+  uploadDocument,
+  updateDocument,
+  shareDocumentWithClients,
+  removeDocumentShare,
+} from "@/lib/firebase/documents";
 import { formatFileSize, canPreview } from "@/lib/documents";
 import type { Document } from "@/types";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +26,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/lib/toast";
+import { DocumentTags, DocumentCategory } from "@/components/contracts/document-tags";
+import { ShareDialog } from "@/components/contracts/share-dialog";
+import { InlinePreview } from "@/components/contracts/inline-preview";
 import {
   Download,
   ExternalLink,
@@ -33,6 +43,7 @@ import {
   Search,
   Trash2,
   Upload,
+  Share2,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -49,6 +60,8 @@ export default function WorkspaceDocumentsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [dropActive, setDropActive] = useState(false);
+  const [shareDoc, setShareDoc] = useState<Document | null>(null);
+  const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
@@ -232,9 +245,43 @@ export default function WorkspaceDocumentsPage() {
               key={doc.id}
               doc={doc}
               onDelete={setDeleteId}
+              onShare={setShareDoc}
+              onPreview={setPreviewDoc}
+              onUpdateTag={(tags) => updateDocument(doc.id, { tags })}
+              onUpdateCategory={(category) => updateDocument(doc.id, { category })}
             />
           ))}
         </div>
+      )}
+
+      {/* Share Dialog */}
+      {shareDoc && (
+        <ShareDialog
+          open={!!shareDoc}
+          onClose={() => setShareDoc(null)}
+          documentId={shareDoc.id}
+          documentName={shareDoc.fileName}
+          existingShares={(shareDoc.sharedWith || []).map((id) => ({
+            clientId: id,
+            clientName: id,
+            clientEmail: "",
+            sharedAt: new Date(),
+          }))}
+          onShare={(docId, clientIds) => shareDocumentWithClients(docId, clientIds)}
+          onRemoveShare={(docId, clientId) => removeDocumentShare(docId, clientId)}
+        />
+      )}
+
+      {/* Inline Preview */}
+      {previewDoc && (
+        <InlinePreview
+          open={!!previewDoc}
+          onClose={() => setPreviewDoc(null)}
+          url={previewDoc.cloudinaryUrl}
+          fileName={previewDoc.fileName}
+          fileType={previewDoc.fileType}
+          mimeType={previewDoc.mimeType}
+        />
       )}
 
       {/* Delete confirmation */}
@@ -368,40 +415,103 @@ function DocumentIcon({ fileType, className }: { fileType: string; className?: s
 function DocumentCard({
   doc,
   onDelete,
+  onShare,
+  onPreview,
+  onUpdateTag,
+  onUpdateCategory,
 }: {
   doc: Document;
   onDelete: (id: string) => void;
+  onShare: (doc: Document) => void;
+  onPreview: (doc: Document) => void;
+  onUpdateTag: (tags: string[]) => void;
+  onUpdateCategory: (category: string) => void;
 }) {
+
+  const [tags, setTags] = useState(doc.tags || []);
+  const [category, setCategory] = useState(doc.category || "");
+  const [editingTags, setEditingTags] = useState(false);
+
+  const handleAddTag = (tag: string) => {
+    const updated = [...new Set([...tags, tag])];
+    setTags(updated);
+    onUpdateTag(updated);
+  };
+
+  const handleRemoveTag = (tag: string) => {
+    const updated = tags.filter((t) => t !== tag);
+    setTags(updated);
+    onUpdateTag(updated);
+  };
+
+  const handleCategoryChange = (newCat: string) => {
+    setCategory(newCat);
+    onUpdateCategory(newCat);
+  };
 
   return (
     <Card className="group transition-all hover:border-primary/50 hover:shadow-sm">
       <CardContent className="p-5">
-        {/* Icon + Delete */}
+        {/* Icon + Actions */}
         <div className="flex items-start justify-between mb-3">
           <div className="text-muted-foreground">
             <DocumentIcon fileType={doc.fileType} className="h-10 w-10" />
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:text-destructive"
-            onClick={(e) => { e.stopPropagation(); onDelete(doc.id); }}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-primary"
+              onClick={(e) => { e.stopPropagation(); onShare(doc); }}
+            >
+              <Share2 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+              onClick={(e) => { e.stopPropagation(); onDelete(doc.id); }}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         {/* Name + meta */}
         <h3 className="text-sm font-semibold truncate mb-1" title={doc.fileName}>
           {doc.fileName}
         </h3>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4 flex-wrap">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2 flex-wrap">
           <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
             {doc.fileType || "file"}
           </Badge>
+          {category && (
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+              {category}
+            </Badge>
+          )}
           <span>{formatFileSize(doc.fileSize)}</span>
           <span>&middot;</span>
           <span>{doc.createdAt?.toDate().toLocaleDateString()}</span>
+        </div>
+
+        {/* Tags */}
+        <div className="mb-3">
+          <DocumentTags
+            tags={tags}
+            onAddTag={handleAddTag}
+            onRemoveTag={handleRemoveTag}
+            editable={true}
+          />
+        </div>
+
+        {/* Category */}
+        <div className="mb-3">
+          <DocumentCategory
+            value={category}
+            onChange={handleCategoryChange}
+            editable={true}
+          />
         </div>
 
         {/* Actions */}
@@ -413,11 +523,14 @@ function DocumentCard({
             </a>
           </Button>
           {canPreview(doc.fileType) && (
-            <Button variant="outline" size="sm" className="gap-2" asChild>
-              <a href={doc.cloudinaryUrl} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="h-3.5 w-3.5" />
-                Preview
-              </a>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => onPreview(doc)}
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              Preview
             </Button>
           )}
         </div>
