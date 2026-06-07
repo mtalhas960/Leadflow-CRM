@@ -25,13 +25,24 @@ import {
   SkeletonList,
 } from "@/components/client/module-layout";
 
+const STATUS_LABELS: Record<string, string> = {
+  paid: "Paid",
+  sent: "Unpaid",
+  overdue: "Overdue",
+  draft: "Draft",
+  cancelled: "Cancelled",
+  partial: "Partial",
+  pending_review: "Pending Review",
+};
+
 const STATUS_STYLES: Record<string, string> = {
   paid: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-  sent: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+  sent: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
   overdue: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
   draft: "bg-muted text-muted-foreground",
   cancelled: "bg-muted text-muted-foreground",
   partial: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+  pending_review: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
 };
 
 function formatCurrency(amount: number, currency: string) {
@@ -58,16 +69,26 @@ function ClientInvoicesPage() {
   }, [clientWorkspaceId, uid]);
 
   const filtered = useMemo(() => {
-    if (statusFilter === "all") return invoices;
-    return invoices.filter((inv) => inv.status === statusFilter);
+    // Never show drafts to clients
+    let visible = invoices.filter((inv) => inv.status !== "draft");
+    if (statusFilter !== "all") visible = visible.filter((inv) => inv.status === statusFilter);
+    // Paid invoices at the bottom
+    return [...visible].sort((a, b) => {
+      if (a.status === "paid" && b.status !== "paid") return 1;
+      if (a.status !== "paid" && b.status === "paid") return -1;
+      return 0;
+    });
   }, [invoices, statusFilter]);
+
+  // Exclude drafts from summary
+  const visibleInvoices = useMemo(() => invoices.filter((inv) => inv.status !== "draft"), [invoices]);
 
   const totalOutstanding = useMemo(
     () =>
-      invoices
+      visibleInvoices
         .filter((inv) => inv.status === "sent" || inv.status === "overdue" || inv.status === "partial")
         .reduce((sum, inv) => sum + inv.total, 0),
-    [invoices]
+    [visibleInvoices]
   );
 
   if (error) {
@@ -89,17 +110,17 @@ function ClientInvoicesPage() {
         description={
           loading
             ? "Loading..."
-            : `${invoices.length} invoice${invoices.length !== 1 ? "s" : ""}`
+            : `${visibleInvoices.length} invoice${visibleInvoices.length !== 1 ? "s" : ""}`
         }
       />
 
       {/* Summary cards */}
-      {!loading && invoices.length > 0 && (
+      {!loading && visibleInvoices.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-3 mb-6">
           <Card>
             <CardContent className="p-4">
               <p className="text-xs text-muted-foreground mb-1">Total Invoices</p>
-              <p className="text-2xl font-bold">{invoices.length}</p>
+              <p className="text-2xl font-bold">{visibleInvoices.length}</p>
             </CardContent>
           </Card>
           <Card>
@@ -107,7 +128,7 @@ function ClientInvoicesPage() {
               <p className="text-xs text-muted-foreground mb-1">Paid</p>
               <p className="text-2xl font-bold text-green-600">
                 {formatCurrency(
-                  invoices
+                  visibleInvoices
                     .filter((inv) => inv.status === "paid")
                     .reduce((sum, inv) => sum + inv.total, 0),
                   "USD"
@@ -127,7 +148,7 @@ function ClientInvoicesPage() {
       )}
 
       {/* Filter */}
-      {!loading && invoices.length > 0 && (
+      {!loading && visibleInvoices.length > 0 && (
         <div className="mb-4">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-40">
@@ -136,9 +157,9 @@ function ClientInvoicesPage() {
             <SelectContent>
               <SelectItem value="all">All statuses</SelectItem>
               <SelectItem value="paid">Paid</SelectItem>
-              <SelectItem value="sent">Sent</SelectItem>
+              <SelectItem value="sent">Unpaid</SelectItem>
+              <SelectItem value="pending_review">Pending Review</SelectItem>
               <SelectItem value="overdue">Overdue</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
               <SelectItem value="partial">Partial</SelectItem>
             </SelectContent>
           </Select>
@@ -186,7 +207,7 @@ function ClientInvoicesPage() {
                           STATUS_STYLES[inv.status] || ""
                         )}
                       >
-                        {inv.status}
+                        {STATUS_LABELS[inv.status] || inv.status}
                       </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">

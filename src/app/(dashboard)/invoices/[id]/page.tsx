@@ -1,7 +1,14 @@
 "use client";
 
 import { useWorkspace } from "@/contexts/workspace-context";
-import { getInvoice, updateInvoice, deleteInvoice } from "@/lib/firebase/invoices";
+import {
+  getInvoice,
+  updateInvoice,
+  deleteInvoice,
+  approvePaymentProof,
+  rejectPaymentProof,
+} from "@/lib/firebase/invoices";
+import { getProject } from "@/lib/firebase/projects";
 import { getWorkspaceMembers } from "@/lib/firebase/workspaces";
 import type { Invoice, InvoiceStatus, WorkspaceMember } from "@/types";
 import { Badge } from "@/components/ui/badge";
@@ -15,20 +22,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import {
-  ArrowLeft,
-  Calendar,
   CheckCircle2,
   ChevronLeft,
   FileText,
   Loader2,
-  MoreHorizontal,
-  Printer,
   Send,
+  ThumbsUp,
+  ThumbsDown,
   Trash2,
   XCircle,
 } from "lucide-react";
@@ -45,6 +52,7 @@ const STATUS_STYLES: Record<string, string> = {
   overdue: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
   cancelled: "bg-muted text-muted-foreground",
   partial: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+  pending_review: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
 };
 
 const TRANSITIONS: Record<InvoiceStatus, InvoiceStatus[]> = {
@@ -54,6 +62,7 @@ const TRANSITIONS: Record<InvoiceStatus, InvoiceStatus[]> = {
   overdue: ["paid", "cancelled"],
   cancelled: [],
   partial: ["paid"],
+  pending_review: ["paid", "sent"],
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -79,16 +88,20 @@ function formatDate(date: Date | null): string {
 export default function InvoiceDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { activeWorkspace } = useWorkspace();
+  const { activeWorkspace, user } = useWorkspace();
   const invoiceId = params.id as string;
 
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
+  const [projectName, setProjectName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [reviewNotes, setReviewNotes] = useState("");
+  const [showReviewDialog, setShowReviewDialog] = useState<"approve" | "reject" | null>(null);
+  const [reviewing, setReviewing] = useState(false);
 
   const loadInvoice = useCallback(async () => {
     if (!activeWorkspace?.id || !invoiceId) return;
@@ -116,6 +129,14 @@ export default function InvoiceDetailPage() {
     loadInvoice();
   }, [loadInvoice]);
 
+  // Fetch project name when invoice loads
+  useEffect(() => {
+    if (!invoice?.projectId) { setProjectName(null); return; }
+    getProject(invoice.projectId)
+      .then((p) => setProjectName(p?.name ?? null))
+      .catch(() => setProjectName(null));
+  }, [invoice?.projectId]);
+
   const client = useMemo(
     () => members.find((m) => m.userId === invoice?.clientId),
     [members, invoice?.clientId]
@@ -135,7 +156,11 @@ export default function InvoiceDetailPage() {
             }
           : prev
       );
-      toast.success(`Invoice marked as ${newStatus}`);
+      toast.success(
+        newStatus === "sent"
+          ? "Invoice sent to client"
+          : `Invoice marked as ${newStatus}`
+      );
     } catch {
       toast.error("Failed to update invoice");
     } finally {
@@ -193,6 +218,23 @@ export default function InvoiceDetailPage() {
   const statusStyle = STATUS_STYLES[invoice.status] || STATUS_STYLES.draft;
   const availableTransitions = TRANSITIONS[invoice.status] || [];
 
+  // ── Display labels ──
+  const statusLabels: Record<string, string> = {
+    draft: "Draft",
+    sent: "Sent",
+    paid: "Paid",
+    overdue: "Overdue",
+    cancelled: "Cancelled",
+    partial: "Partial",
+    pending_review: "Pending Review",
+  };
+
+  const transitionLabels: Record<string, string> = {
+    sent: invoice.status === "pending_review" ? "Reject & Revert" : "Send Invoice",
+    paid: "Mark as Paid",
+    cancelled: "Cancel Invoice",
+  };
+
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       {/* Back link */}
@@ -210,7 +252,9 @@ export default function InvoiceDetailPage() {
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-bold tracking-tight truncate">{invoice.invoiceNumber}</h1>
             <Badge variant="outline" className={cn("text-xs", statusStyle)}>
-              {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
+              {invoice.status === "sent" && invoice.dueDate?.toDate() < new Date()
+                ? "Overdue"
+                : statusLabels[invoice.status] || invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
             </Badge>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
@@ -221,31 +265,33 @@ export default function InvoiceDetailPage() {
           {availableTransitions.map((status) => (
             <Button
               key={status}
-              variant="outline"
+              variant={status === "cancelled" ? "outline" : "default"}
               size="sm"
               onClick={() => handleStatusChange(status)}
               disabled={updating}
               className="gap-2"
             >
-              {status === "paid" && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+              {status === "paid" && <CheckCircle2 className="h-4 w-4" />}
               {status === "sent" && <Send className="h-4 w-4" />}
-              {status === "cancelled" && <XCircle className="h-4 w-4 text-destructive" />}
-              {status.charAt(0).toUpperCase() + status.slice(1)}
+              {status === "cancelled" && <XCircle className="h-4 w-4" />}
+              {transitionLabels[status] || status.charAt(0).toUpperCase() + status.slice(1)}
             </Button>
           ))}
-          {availableTransitions.length === 0 && (
+          {(invoice.status === "paid" || invoice.status === "cancelled") && (
             <Button variant="outline" size="sm" disabled>
               No actions available
             </Button>
           )}
-          <Button
-            variant="outline"
-            size="icon"
-            className="text-destructive"
-            onClick={() => setShowDeleteDialog(true)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          {invoice.status === "draft" && (
+            <Button
+              variant="outline"
+              size="icon"
+              className="text-destructive"
+              onClick={() => setShowDeleteDialog(true)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
 
@@ -271,6 +317,11 @@ export default function InvoiceDetailPage() {
               <p className="text-xs text-muted-foreground uppercase font-semibold mb-1">Bill To</p>
               <p className="text-sm font-medium">{client.displayName}</p>
               <p className="text-sm text-muted-foreground">{client.email}</p>
+              {projectName && (
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  Project: {projectName}
+                </p>
+              )}
             </div>
           )}
 
@@ -311,6 +362,24 @@ export default function InvoiceDetailPage() {
               <span className="text-muted-foreground">Tax ({invoice.taxRate}%)</span>
               <span>{formatCurrency(invoice.taxAmount, invoice.currency)}</span>
             </div>
+            {invoice.discount && invoice.discount.amount > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">
+                  Discount
+                  {invoice.discount.type === "percentage"
+                    ? ` (${invoice.discount.amount}%)`
+                    : ""}
+                </span>
+                <span className="text-green-600">
+                  -{formatCurrency(
+                    invoice.discount.type === "percentage"
+                      ? invoice.subtotal * (invoice.discount.amount / 100)
+                      : Math.min(invoice.discount.amount, invoice.subtotal + invoice.taxAmount),
+                    invoice.currency
+                  )}
+                </span>
+              </div>
+            )}
             <Separator />
             <div className="flex justify-between text-base font-bold">
               <span>Total</span>
@@ -334,8 +403,165 @@ export default function InvoiceDetailPage() {
               </div>
             </>
           )}
+
+          {/* Payment Proof */}
+          {invoice.paymentProof && (
+            <>
+              <Separator />
+              <div>
+                <p className="text-xs text-muted-foreground uppercase font-semibold mb-2">Payment Proof</p>
+                <div className="flex items-start gap-4">
+                  <div className="flex-1 space-y-1">
+                    <p className="text-sm font-medium">{invoice.paymentProof.fileName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Uploaded{" "}
+                      {invoice.paymentProof.uploadedAt.toDate().toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                    </p>
+                    {invoice.paymentProof.status === "pending" && (
+                      <Badge variant="outline" className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-xs mt-1">
+                        Pending Review
+                      </Badge>
+                    )}
+                    {invoice.paymentProof.status === "approved" && (
+                      <Badge variant="outline" className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 text-xs mt-1">
+                        Approved
+                      </Badge>
+                    )}
+                    {invoice.paymentProof.status === "rejected" && (
+                      <Badge variant="outline" className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 text-xs mt-1">
+                        Rejected
+                      </Badge>
+                    )}
+                    {invoice.paymentProof.reviewNotes && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Review notes: {invoice.paymentProof.reviewNotes}
+                      </p>
+                    )}
+                  </div>
+                  {invoice.paymentProof.filePath && (
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={invoice.paymentProof.filePath} target="_blank" rel="noopener noreferrer">
+                        <FileText className="h-4 w-4 mr-1" />
+                        View
+                      </a>
+                    </Button>
+                  )}
+                </div>
+                {invoice.paymentProof.status === "pending" && (
+                  <div className="flex items-center gap-2 mt-3">
+                    <Button
+                      size="sm"
+                      className="gap-1.5"
+                      onClick={() => setShowReviewDialog("approve")}
+                    >
+                      <ThumbsUp className="h-4 w-4" />
+                      Approve Payment
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 text-destructive"
+                      onClick={() => setShowReviewDialog("reject")}
+                    >
+                      <ThumbsDown className="h-4 w-4" />
+                      Reject
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
+
+      {/* Review Dialog */}
+      <Dialog
+        open={showReviewDialog !== null}
+        onOpenChange={(open) => { if (!open) { setShowReviewDialog(null); setReviewNotes(""); } }}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>
+              {showReviewDialog === "approve" ? "Approve Payment" : "Reject Payment Proof"}
+            </DialogTitle>
+            <DialogDescription>
+              {showReviewDialog === "approve"
+                ? "This will mark the invoice as paid and confirm the payment proof."
+                : "The client will see your reason. They can then upload a corrected proof."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <Label htmlFor="review-notes">
+              {showReviewDialog === "approve" ? "Notes (optional)" : "Reason for rejection *"}
+            </Label>
+            <Textarea
+              id="review-notes"
+              placeholder={
+                showReviewDialog === "approve"
+                  ? "Approval notes..."
+                  : "Explain why the proof was rejected so the client can fix it..."
+              }
+              value={reviewNotes}
+              onChange={(e) => setReviewNotes(e.target.value)}
+              rows={3}
+            />
+            {showReviewDialog === "reject" && !reviewNotes.trim() && (
+              <p className="text-xs text-destructive">Please provide a reason for rejection.</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowReviewDialog(null); setReviewNotes(""); }}>
+              Cancel
+            </Button>
+            <Button
+              variant={showReviewDialog === "approve" ? "default" : "destructive"}
+              onClick={async () => {
+                if (!invoice) return;
+                if (showReviewDialog === "reject" && !reviewNotes.trim()) {
+                  toast.error("Please provide a reason for rejection");
+                  return;
+                }
+                setReviewing(true);
+                try {
+                  if (showReviewDialog === "approve") {
+                    await approvePaymentProof(invoice.id, user?.id || "", reviewNotes || undefined);
+                    setInvoice((prev) =>
+                      prev ? { ...prev, status: "paid", paidDate: { toDate: () => new Date() } as Invoice["paidDate"], paymentProof: { ...prev.paymentProof!, status: "approved", reviewedBy: user?.id, reviewedAt: { toDate: () => new Date() } as any } } : prev
+                    );
+                    toast.success("Payment approved — invoice marked as paid");
+                  } else {
+                    await rejectPaymentProof(invoice.id, user?.id || "", reviewNotes);
+                    setInvoice((prev) =>
+                      prev ? { ...prev, status: "sent" as InvoiceStatus, paymentProof: { ...prev.paymentProof!, status: "rejected", reviewedBy: user?.id, reviewedAt: { toDate: () => new Date() } as any } } : prev
+                    );
+                    toast.success("Payment proof rejected — invoice reverted to Unpaid");
+                  }
+                } catch {
+                  toast.error("Failed to review payment proof");
+                } finally {
+                  setReviewing(false);
+                  setShowReviewDialog(null);
+                  setReviewNotes("");
+                }
+              }}
+              disabled={
+                reviewing ||
+                (showReviewDialog === "reject" && !reviewNotes.trim())
+              }
+            >
+              {reviewing ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{showReviewDialog === "approve" ? "Approving..." : "Rejecting..."}</>
+              ) : (
+                showReviewDialog === "approve" ? "Approve & Mark Paid" : "Reject Proof"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

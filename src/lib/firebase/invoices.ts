@@ -14,7 +14,7 @@ import {
   Timestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
-import type { Invoice, InvoiceStatus, InvoiceLineItem } from "@/types";
+import type { Invoice, InvoiceStatus, InvoiceLineItem, InvoiceDiscount, PaymentProof } from "@/types";
 
 const COLLECTION = "invoices";
 
@@ -34,24 +34,48 @@ export async function generateInvoiceNumber(
   }
 
   const year = new Date().getFullYear();
-  const q = query(
-    collection(db, COLLECTION),
-    where("workspaceId", "==", workspaceId),
-    where("invoiceNumber", ">=", `INV-${year}-`),
-    where("invoiceNumber", "<", `INV-${year}-~`),
-    orderBy("invoiceNumber", "desc"),
-    limit(1)
-  );
-  const snap = await getDocs(q);
 
-  let seq = 1;
-  if (!snap.empty) {
-    const last = snap.docs[0].data().invoiceNumber as string;
-    const parts = last.split("-");
-    seq = (parseInt(parts[parts.length - 1], 10) || 0) + 1;
+  // Try composite index query first, fall back to scan if index missing
+  try {
+    const q = query(
+      collection(db, COLLECTION),
+      where("workspaceId", "==", workspaceId),
+      where("invoiceNumber", ">=", `INV-${year}-`),
+      where("invoiceNumber", "<", `INV-${year}-~`),
+      orderBy("invoiceNumber", "desc"),
+      limit(1)
+    );
+    const snap = await getDocs(q);
+
+    let seq = 1;
+    if (!snap.empty) {
+      const last = snap.docs[0].data().invoiceNumber as string;
+      const parts = last.split("-");
+      seq = (parseInt(parts[parts.length - 1], 10) || 0) + 1;
+    }
+
+    return `INV-${year}-${String(seq).padStart(3, "0")}`;
+  } catch {
+    // Fallback: scan all workspace invoices and find max number
+    const q = query(
+      collection(db, COLLECTION),
+      where("workspaceId", "==", workspaceId),
+      orderBy("createdAt", "desc"),
+      limit(500)
+    );
+    const snap = await getDocs(q);
+
+    let maxSeq = 0;
+    snap.docs.forEach((d) => {
+      const num = d.data().invoiceNumber as string;
+      if (!num) return;
+      const parts = num.split("-");
+      const n = parseInt(parts[parts.length - 1], 10);
+      if (!isNaN(n) && n > maxSeq) maxSeq = n;
+    });
+
+    return `INV-${year}-${String(maxSeq + 1).padStart(3, "0")}`;
   }
-
-  return `INV-${year}-${String(seq).padStart(3, "0")}`;
 }
 
 // ── Create ───────────────────────────────────────────────────────────────────
@@ -62,6 +86,7 @@ export interface CreateInvoiceData {
   invoiceNumber?: string;
   lineItems: InvoiceLineItem[];
   taxRate?: number;
+  discount?: InvoiceDiscount;
   currency?: string;
   notes?: string | null;
   issueDate?: Date;
@@ -82,7 +107,17 @@ export async function createInvoice(
   const subtotal = data.lineItems.reduce((sum, item) => sum + item.total, 0);
   const taxRate = data.taxRate ?? 0;
   const taxAmount = subtotal * (taxRate / 100);
-  const total = subtotal + taxAmount;
+
+  // Compute discount
+  let discountAmount = 0;
+  if (data.discount && data.discount.amount > 0) {
+    if (data.discount.type === "percentage") {
+      discountAmount = subtotal * (data.discount.amount / 100);
+    } else {
+      discountAmount = Math.min(data.discount.amount, subtotal + taxAmount);
+    }
+  }
+  const total = subtotal + taxAmount - discountAmount;
 
   const invoiceNumber =
     data.invoiceNumber || (await generateInvoiceNumber(workspaceId));
@@ -101,6 +136,7 @@ export async function createInvoice(
     subtotal,
     taxRate,
     taxAmount,
+    discount: data.discount || null,
     total,
     currency: data.currency || "USD",
     issueDate: Timestamp.fromDate(issueDate),
@@ -164,6 +200,7 @@ export interface UpdateInvoiceData {
   status?: InvoiceStatus;
   lineItems?: InvoiceLineItem[];
   taxRate?: number;
+  discount?: InvoiceDiscount | null;
   notes?: string | null;
   dueDate?: Date;
 }
@@ -180,12 +217,23 @@ export async function updateInvoice(id: string, data: UpdateInvoiceData): Promis
     updatedAt: serverTimestamp(),
   };
 
-  // Recompute financials if line items changed
+  // Recompute financials if line items or discount changed
   if (data.lineItems) {
     const subtotal = data.lineItems.reduce((sum, item) => sum + item.total, 0);
     const taxRate = (data.taxRate ?? 0);
     const taxAmount = subtotal * (taxRate / 100);
-    const total = subtotal + taxAmount;
+
+    const discount = data.discount !== undefined ? data.discount : (updatePayload.discount as InvoiceDiscount | null);
+    let discountAmount = 0;
+    if (discount && discount.amount > 0) {
+      if (discount.type === "percentage") {
+        discountAmount = subtotal * (discount.amount / 100);
+      } else {
+        discountAmount = Math.min(discount.amount, subtotal + taxAmount);
+      }
+    }
+
+    const total = subtotal + taxAmount - discountAmount;
     updatePayload.subtotal = subtotal;
     updatePayload.taxAmount = taxAmount;
     updatePayload.total = total;
@@ -213,4 +261,88 @@ export async function deleteInvoice(id: string): Promise<void> {
     return;
   }
   await deleteDoc(doc(db, COLLECTION, id));
+}
+
+// ── Payment Proof ────────────────────────────────────────────────────────────
+
+export async function submitPaymentProof(
+  invoiceId: string,
+  userId: string,
+  proof: { fileName: string; filePath: string; fileSize: number }
+): Promise<void> {
+  if (isDemoMode()) return;
+
+  const paymentProof: PaymentProof = {
+    status: "pending",
+    uploadedBy: userId,
+    uploadedAt: Timestamp.now(),
+    fileName: proof.fileName,
+    filePath: proof.filePath,
+    fileSize: proof.fileSize,
+  };
+
+  await updateDoc(doc(db, COLLECTION, invoiceId), {
+    paymentProof,
+    status: "pending_review",
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function approvePaymentProof(
+  invoiceId: string,
+  userId: string,
+  notes?: string
+): Promise<void> {
+  if (isDemoMode()) return;
+
+  const ref = doc(db, COLLECTION, invoiceId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error("Invoice not found");
+
+  const current = snap.data().paymentProof as PaymentProof | undefined;
+  if (!current) throw new Error("No payment proof to approve");
+
+  const updatedProof: PaymentProof = {
+    ...current,
+    status: "approved",
+    reviewedBy: userId,
+    reviewedAt: Timestamp.now(),
+    reviewNotes: notes || current.reviewNotes,
+  };
+
+  await updateDoc(ref, {
+    paymentProof: updatedProof,
+    status: "paid",
+    paidDate: Timestamp.now(),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function rejectPaymentProof(
+  invoiceId: string,
+  userId: string,
+  notes?: string
+): Promise<void> {
+  if (isDemoMode()) return;
+
+  const ref = doc(db, COLLECTION, invoiceId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) throw new Error("Invoice not found");
+
+  const current = snap.data().paymentProof as PaymentProof | undefined;
+  if (!current) throw new Error("No payment proof to reject");
+
+  const updatedProof: PaymentProof = {
+    ...current,
+    status: "rejected",
+    reviewedBy: userId,
+    reviewedAt: Timestamp.now(),
+    reviewNotes: notes || current.reviewNotes,
+  };
+
+  await updateDoc(ref, {
+    paymentProof: updatedProof,
+    status: "sent",
+    updatedAt: serverTimestamp(),
+  });
 }
