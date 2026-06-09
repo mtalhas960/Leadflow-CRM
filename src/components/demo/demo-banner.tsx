@@ -1,13 +1,16 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useDemoMode } from "@/lib/demo/demo-context";
-import { ExternalLink, LogOut, AlertTriangle, Users } from "lucide-react";
+import { ExternalLink, LogOut, AlertTriangle, Users, LayoutDashboard } from "lucide-react";
 
 export function DemoBanner() {
   const { isDemoMode, exitDemo } = useDemoMode();
   const router = useRouter();
+  const pathname = usePathname();
+  const isClientDemo = pathname?.startsWith("/client");
 
   if (!isDemoMode) return null;
 
@@ -17,11 +20,13 @@ export function DemoBanner() {
         <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
           <AlertTriangle className="h-4 w-4 shrink-0" />
           <span className="hidden sm:inline">
-            You are in demo mode - data is not saved. Deploy your own instance to
-            keep your data.
+            {isClientDemo
+              ? "Client demo mode - data is not saved."
+              : "You are in demo mode - data is not saved. Deploy your own instance to keep your data."
+            }
           </span>
           <span className="sm:hidden">
-            Demo mode - data not saved.
+            {isClientDemo ? "Client demo" : "Demo mode - data not saved."}
           </span>
           <a
             href="https://github.com/Tabish5858/Leadflow-CRM"
@@ -34,15 +39,27 @@ export function DemoBanner() {
           </a>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.push("/client/dashboard")}
-            className="shrink-0 gap-1.5 border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 hover:text-amber-700 dark:hover:text-amber-300"
-          >
-            <Users className="h-3.5 w-3.5" />
-            Enter Client Demo
-          </Button>
+          {isClientDemo ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push("/dashboard")}
+              className="shrink-0 gap-1.5 border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 hover:text-amber-700 dark:hover:text-amber-300"
+            >
+              <LayoutDashboard className="h-3.5 w-3.5" />
+              Back to Admin Demo
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push("/client/dashboard")}
+              className="shrink-0 gap-1.5 border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 hover:text-amber-700 dark:hover:text-amber-300"
+            >
+              <Users className="h-3.5 w-3.5" />
+              Enter Client Demo
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"
