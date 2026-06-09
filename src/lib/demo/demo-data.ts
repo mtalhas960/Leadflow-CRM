@@ -287,6 +287,17 @@ export const DEMO_CONVERSATIONS: Conversation[] = [
     unreadCount: 1,
     createdAt: daysAgo(45),
   },
+  {
+    id: "demo-conv-004",
+    workspaceId: DEMO_WORKSPACE_ID,
+    type: "member",
+    participantIds: ["demo-client-001", DEMO_USER_ID],
+    participantNames: ["James Thompson", "Sarah Chen"],
+    lastMessage: "Thanks Sarah, the website looks great! I left some minor feedback.",
+    lastMessageAt: hoursAgo(1),
+    unreadCount: 1,
+    createdAt: daysAgo(14),
+  },
 ];
 
 // ─── Messages ─────────────────────────────────────────────────────────────────
@@ -392,6 +403,32 @@ export const DEMO_MESSAGES: Message[] = [
     edited: false,
     readBy: ["demo-member-002", "demo-member-003"],
     createdAt: hoursAgo(8),
+  },
+
+  // conv-004: James (client) & Sarah
+  {
+    id: "demo-msg-009",
+    conversationId: "demo-conv-004",
+    workspaceId: DEMO_WORKSPACE_ID,
+    senderId: DEMO_USER_ID,
+    senderName: "Sarah Chen",
+    body: "Hi James! The TechSphere onboarding project is progressing well. We've completed the homepage wireframes and they look fantastic.",
+    deleted: false,
+    edited: false,
+    readBy: ["demo-client-001"],
+    createdAt: hoursAgo(3),
+  },
+  {
+    id: "demo-msg-010",
+    conversationId: "demo-conv-004",
+    workspaceId: DEMO_WORKSPACE_ID,
+    senderId: "demo-client-001",
+    senderName: "James Thompson",
+    body: "Thanks Sarah, the website looks great! I left some minor feedback on the color scheme in the project files.",
+    deleted: false,
+    edited: false,
+    readBy: [DEMO_USER_ID],
+    createdAt: hoursAgo(1),
   },
 ];
 
@@ -653,6 +690,27 @@ export const DEMO_MEETINGS: Meeting[] = [
     meetingType: "scheduled",
     createdBy: DEMO_USER_ID,
     createdAt: daysAgo(1),
+    updatedAt: daysAgo(1),
+  },
+  {
+    id: "demo-meeting-003",
+    workspaceId: DEMO_WORKSPACE_ID,
+    title: "TechSphere Onboarding Review",
+    description: "Weekly check-in with James Thompson on the TechSphere Onboarding project progress.",
+    startTime: futureHours(24),
+    endTime: futureHours(25),
+    timezone: "America/New_York",
+    attendees: [
+      { email: "client@demo.leadflow.dev", name: "James Thompson" },
+      { email: DEMO_USER.email, name: DEMO_USER.displayName },
+    ],
+    conferencingTool: "google_meet",
+    googleMeetLink: "https://meet.google.com/demo-client-review",
+    calendarEventId: "demo-cal-003",
+    status: "scheduled",
+    meetingType: "scheduled",
+    createdBy: DEMO_USER_ID,
+    createdAt: daysAgo(3),
     updatedAt: daysAgo(1),
   },
 ];

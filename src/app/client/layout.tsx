@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ClientPreviewBanner } from "@/components/client/ClientPreviewBanner";
+import { DemoBanner } from "@/components/demo/demo-banner";
 import { ClientUserProvider } from "@/contexts/client-user-context";
 import { ClientPortalProvider } from "@/contexts/client-portal-context";
 import { auth, db } from "@/lib/firebase/client";
@@ -606,6 +607,9 @@ function ClientLayoutInner({ children }: { children: React.ReactNode }) {
 
         {/* Main content */}
         <main className="flex flex-1 flex-col overflow-hidden">
+          {/* Demo mode banner */}
+          <DemoBanner />
+
           {/* Preview banner (agency preview mode) */}
           <ClientPreviewBanner />
 

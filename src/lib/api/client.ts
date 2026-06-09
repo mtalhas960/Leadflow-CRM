@@ -21,11 +21,22 @@
 
 /**
  * Returns authenticated headers for fetch requests.
- * Throws if user is not signed in.
+ * Throws if user is not signed in (unless in demo mode).
  */
 export async function getApiAuthHeaders(
   workspaceId?: string
 ): Promise<Record<string, string>> {
+  // Demo mode: return safe fake headers (server routes will skip auth)
+  if (typeof window !== "undefined" && localStorage.getItem("leadflow_demo_mode") === "true") {
+    const headers: Record<string, string> = {
+      Authorization: "Bearer demo",
+    };
+    if (workspaceId) {
+      headers["x-workspace-id"] = workspaceId;
+    }
+    return headers;
+  }
+
   const { getAuth } = await import("firebase/auth");
   const auth = getAuth();
   const user = auth.currentUser;

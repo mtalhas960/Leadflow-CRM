@@ -206,6 +206,14 @@ export async function editMessage(
   messageId: string,
   newBody: string
 ): Promise<void> {
+  if (isDemoMode()) {
+    const msg = demoStore.messages.find((m) => m.id === messageId);
+    if (msg) {
+      msg.body = newBody;
+      msg.edited = true;
+    }
+    return;
+  }
   const msgRef = doc(db, MESSAGES_COLLECTION, messageId);
   await updateDoc(msgRef, {
     body: newBody,
@@ -217,6 +225,15 @@ export async function editMessage(
 // ─── Delete Message (soft) ───────────────────────────────────────────────────
 
 export async function deleteMessage(messageId: string): Promise<void> {
+  if (isDemoMode()) {
+    const msg = demoStore.messages.find((m) => m.id === messageId);
+    if (msg) {
+      msg.deleted = true;
+      msg.body = "";
+      msg.edited = false;
+    }
+    return;
+  }
   const msgRef = doc(db, MESSAGES_COLLECTION, messageId);
   await updateDoc(msgRef, {
     deleted: true,
@@ -228,6 +245,15 @@ export async function deleteMessage(messageId: string): Promise<void> {
 // ─── Delete Conversation ─────────────────────────────────────────────────────
 
 export async function deleteConversation(conversationId: string, workspaceId?: string): Promise<void> {
+  if (isDemoMode()) {
+    demoStore.conversations = demoStore.conversations.filter(
+      (c: Conversation) => c.id !== conversationId
+    );
+    demoStore.messages = demoStore.messages.filter(
+      (m: Message) => m.conversationId !== conversationId
+    );
+    return;
+  }
   // Delete all messages in the conversation
   const constraints: QueryConstraint[] = [where("conversationId", "==", conversationId)];
   if (workspaceId) constraints.push(where("workspaceId", "==", workspaceId));
@@ -285,6 +311,24 @@ export async function toggleReaction(
   emoji: string,
   userId: string
 ): Promise<void> {
+  if (isDemoMode()) {
+    const msg = demoStore.messages.find((m) => m.id === messageId);
+    if (!msg) return;
+    const reactions: Record<string, string[]> = msg.reactions || {};
+    const userList = reactions[emoji] || [];
+    if (userList.includes(userId)) {
+      const updated = userList.filter((id) => id !== userId);
+      if (updated.length === 0) {
+        delete reactions[emoji];
+      } else {
+        reactions[emoji] = updated;
+      }
+    } else {
+      reactions[emoji] = [...userList, userId];
+    }
+    msg.reactions = reactions;
+    return;
+  }
   const msgRef = doc(db, MESSAGES_COLLECTION, messageId);
   const snap = await getDoc(msgRef);
 
@@ -325,6 +369,7 @@ export async function fixConversationNames(
   conversations: Conversation[],
   memberDisplayNames: Map<string, string>
 ): Promise<number> {
+  if (isDemoMode()) return 0;
   let fixed = 0;
 
   for (const conv of conversations) {
@@ -366,6 +411,19 @@ export async function markMessagesAsRead(
 ): Promise<void> {
   if (!messageIds.length || !userId) return;
 
+  if (isDemoMode()) {
+    for (const id of messageIds) {
+      const msg = demoStore.messages.find((m) => m.id === id);
+      if (msg) {
+        const readBy: string[] = msg.readBy || [];
+        if (!readBy.includes(userId)) {
+          msg.readBy = [...readBy, userId];
+        }
+      }
+    }
+    return;
+  }
+
   const batch = writeBatch(db);
   for (const id of messageIds) {
     const msgRef = doc(db, MESSAGES_COLLECTION, id);
@@ -393,13 +451,20 @@ export async function markConversationAsRead(
 ): Promise<void> {
   if (!conversationId || !userId) return;
 
+  if (isDemoMode()) {
+    const conv = demoStore.conversations.find(
+      (c: Conversation) => c.id === conversationId
+    );
+    if (conv) conv.unreadCount = 0;
+    return;
+  }
+
   try {
     // Reset unread count on conversation
     const convRef = doc(db, CONVERSATIONS_COLLECTION, conversationId);
     await updateDoc(convRef, { unreadCount: 0 });
 
     // Fetch messages, filtered by workspaceId so Firestore rules pass
-    // (isWorkspaceMember check reads resource.data.workspaceId - must match)
     const constraints: QueryConstraint[] = [where("conversationId", "==", conversationId)];
     if (workspaceId) constraints.push(where("workspaceId", "==", workspaceId));
     const q = query(collection(db, MESSAGES_COLLECTION), ...constraints);

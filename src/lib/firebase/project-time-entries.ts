@@ -13,6 +13,11 @@ import {
 import { db } from "@/lib/firebase/client";
 import type { ProjectTimeEntry } from "@/types";
 
+function isDemoMode(): boolean {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem("leadflow_demo_mode") === "true";
+}
+
 const COLLECTION = "project_time_entries";
 
 export async function createTimeEntry(
@@ -30,6 +35,10 @@ export async function createTimeEntry(
     billable?: boolean;
   }
 ): Promise<string> {
+  if (isDemoMode()) {
+    const id = `demo-time-entry-${Date.now()}`;
+    return id;
+  }
   const docRef = await addDoc(collection(db, COLLECTION), {
     projectId,
     workspaceId,
@@ -57,6 +66,9 @@ export async function createTimeEntry(
 export async function getProjectTimeEntries(
   projectId: string
 ): Promise<ProjectTimeEntry[]> {
+  if (isDemoMode()) {
+    return [];
+  }
   const q = query(
     collection(db, COLLECTION),
     where("projectId", "==", projectId),
@@ -69,6 +81,7 @@ export async function getProjectTimeEntries(
 }
 
 export async function deleteTimeEntry(id: string): Promise<void> {
+  if (isDemoMode()) return;
   await updateDoc(doc(db, COLLECTION, id), {
     isDeleted: true,
     updatedAt: serverTimestamp(),
@@ -83,6 +96,7 @@ export async function markTimeEntriesAsBilled(
   invoiceId: string,
   invoiceNumber: string
 ): Promise<void> {
+  if (isDemoMode()) return;
   const writes = entryIds.map((id) =>
     updateDoc(doc(db, COLLECTION, id), {
       billed: true,

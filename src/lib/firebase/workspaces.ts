@@ -164,6 +164,14 @@ export async function getWorkspaceMembers(
         role: "owner",
         joinedAt: Timestamp.now(),
       },
+      {
+        userId: "demo-client-001",
+        email: "client@demo.leadflow.dev",
+        displayName: "James Thompson",
+        photoURL: null,
+        role: "client" as const,
+        joinedAt: Timestamp.now(),
+      },
       ...DEMO_TEAM_MEMBERS.map((m) => ({
         userId: m.id,
         email: m.email,
