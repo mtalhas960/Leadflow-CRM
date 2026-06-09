@@ -19,6 +19,11 @@ import { useWorkspace } from "@/contexts/workspace-context";
 import { db } from "@/lib/firebase/client";
 import { useClientPreview } from "@/lib/hooks/use-client-preview";
 import { toast } from "@/lib/toast";
+
+function isDemoMode(): boolean {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem("leadflow_demo_mode") === "true";
+}
 import { cn } from "@/lib/utils";
 import type { ClientPortalSettings } from "@/types";
 import { DEFAULT_CLIENT_PORTAL_SETTINGS } from "@/types";
@@ -169,6 +174,11 @@ export default function ClientPortalSettingsPage() {
       setLoading(true);
       setError(null);
       try {
+        if (isDemoMode()) {
+          setSettings(DEFAULT_FORM);
+          setLoading(false);
+          return;
+        }
         const ref = doc(db, "client_portal_settings", workspaceId);
         const snap = await getDoc(ref);
         if (snap.exists()) {
@@ -384,6 +394,7 @@ export default function ClientPortalSettingsPage() {
 
   const handleSave = async () => {
     if (!workspaceId || !user) return;
+    if (isDemoMode()) { toast.success("Client portal settings saved"); return; }
     setSaving(true);
     try {
       const ref = doc(db, "client_portal_settings", workspaceId);
