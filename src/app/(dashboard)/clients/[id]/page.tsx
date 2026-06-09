@@ -13,6 +13,7 @@ import {
   updateDoc,
   arrayUnion,
   arrayRemove,
+  Timestamp,
 } from "firebase/firestore";
 import {
   ArrowLeft,
@@ -30,6 +31,11 @@ import { db } from "@/lib/firebase/client";
 import { useWorkspace } from "@/contexts/workspace-context";
 import { RequireModuleAccess } from "@/components/shared/require-module-access";
 import { toast } from "@/lib/toast";
+
+function isDemoMode(): boolean {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem("leadflow_demo_mode") === "true";
+}
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -162,6 +168,34 @@ export default function ClientDetailPage({
       setLoading(true);
       setError(null);
       try {
+        // Demo mode: serve from in-memory store
+        if (isDemoMode()) {
+          const { demoStore, DEMO_CLIENT_USER } = await import("@/lib/demo/demo-data");
+          const demoClient = DEMO_CLIENT_USER;
+
+          setClient({
+            id: demoClient.id,
+            displayName: demoClient.displayName,
+            email: demoClient.email,
+            photoURL: null,
+            createdAt: new Date(),
+            lastActiveAt: new Date(),
+            role: "client",
+          });
+          setClientStatus("active");
+
+          const all = demoStore.getProjects().filter(
+            (p: { workspaceId: string }) => p.workspaceId === activeWorkspace.id
+          );
+          const assigned = all.filter(
+            (p: { clients?: string[] }) => p.clients?.includes(clientUserId)
+          );
+          setAssignedProjects(assigned);
+          setAllProjects(all);
+          setLoading(false);
+          return;
+        }
+
         const [userSnap] = await Promise.all([
           getDoc(doc(db, "users", clientUserId)),
           getDoc(doc(db, "workspaces", activeWorkspace.id)),
@@ -236,6 +270,7 @@ export default function ClientDetailPage({
 
   async function handleRemoveClient() {
     if (!activeWorkspace?.id || !clientUserId || !user) return;
+    if (isDemoMode()) { toast.error("Not available in demo mode"); setRemoveOpen(false); return; }
     setRemoving(true);
     try {
       const wsRef = doc(db, "workspaces", activeWorkspace.id);
@@ -288,6 +323,7 @@ export default function ClientDetailPage({
 
   async function handleSaveAssignments() {
     if (!activeWorkspace?.id || !clientUserId) return;
+    if (isDemoMode()) { toast.error("Not available in demo mode"); setAssignOpen(false); return; }
     setSavingAssignments(true);
 
     const currentlyAssigned = new Set(assignedProjects.map((p) => p.id));
