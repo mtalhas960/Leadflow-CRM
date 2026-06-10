@@ -44,7 +44,7 @@ Most CRMs lock you into monthly subscriptions, limit your data portability, and 
 - **Self-hosted** - Deploy on your own infrastructure. Firebase Spark plan is free forever.
 - **Open source (MIT)** - No hidden costs, no per-seat pricing, no surprises.
 - **Your data stays yours** - No vendor lock-in. Export anytime.
-- **Docker ready** - One command to deploy.
+- **Deploy anywhere** - Vercel, Node.js server, or your own infrastructure.
 - **Under 10 minutes** - From clone to running.
 
 ---
@@ -371,7 +371,7 @@ Open issues: [github.com/Tabish5858/leadflow-crm/issues](https://github.com/Tabi
 - E2E tests with Playwright
 - Gmail OAuth integration
 - PWA / offline mode
-- Docker configuration
+- Deployment configuration (Vercel / Node.js)
 - App Check enforcement
 - CSP headers
 
