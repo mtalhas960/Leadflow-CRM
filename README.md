@@ -151,24 +151,28 @@ The demo is pre-loaded with sample data so you can test every feature immediatel
 ## Screenshots
 
 <p align="center">
-  <img src="https://crm.tabishbinishfaq.dev/og-image.svg" alt="LeadFlow Dashboard" width="600" />
+  <img src="screenshots/dashboard.png" alt="LeadFlow Dashboard" width="600" />
   <br />
-  <em>Dashboard with tasks, projects, invoices, meetings &amp; messages widgets</em>
+  <em>Dashboard with tasks, projects, invoices, meetings and messages widgets</em>
 </p>
 
 <p align="center">
-  <img src="https://crm.tabishbinishfaq.dev/og-image.svg" alt="LeadFlow Pipeline Kanban" width="600" />
+  <img src="screenshots/pipeline.png" alt="LeadFlow Pipeline Kanban" width="600" />
   <br />
-  <em>Drag-and-drop Kanban pipeline with deal stages and probability forecasting</em>
+  <em>Lead and pipeline management with spreadsheet and Kanban views</em>
 </p>
 
 <p align="center">
-  <img src="https://crm.tabishbinishfaq.dev/og-image.svg" alt="LeadFlow Invoice Manager" width="600" />
+  <img src="screenshots/invoices.png" alt="LeadFlow Invoice Manager" width="600" />
   <br />
   <em>Invoice management with status tracking, line items, and payment workflows</em>
 </p>
 
-> Full screenshots coming soon. The OG image above shows the LeadFlow branding. Visit the [live demo](https://crm.tabishbinishfaq.dev) to see the actual UI.
+<p align="center">
+  <img src="screenshots/projects.png" alt="LeadFlow Project Management" width="600" />
+  <br />
+  <em>Client project tracking with progress, budgets, and deadlines</em>
+</p>
 
 ---
 
