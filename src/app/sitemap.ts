@@ -33,6 +33,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${baseUrl}/docs/cloudinary-setup`, priority: 0.6, freq: "monthly" as const },
     { url: `${baseUrl}/docs/resend-setup`, priority: 0.6, freq: "monthly" as const },
     { url: `${baseUrl}/docs/google-calendar-setup`, priority: 0.6, freq: "monthly" as const },
+    { url: `${baseUrl}/docs/sentry-setup`, priority: 0.5, freq: "monthly" as const },
     { url: `${baseUrl}/docs/env-variables`, priority: 0.6, freq: "monthly" as const },
   ];
 

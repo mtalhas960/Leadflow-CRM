@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, BookOpen, Cloud, Database, Globe, Key, Mail } from "lucide-react";
+import { ArrowRight, BookOpen, Bug, Cloud, Database, Globe, Key, Mail } from "lucide-react";
 import { SetupChecklist } from "@/components/docs/setup-checklist";
 
 export const metadata: Metadata = {
@@ -52,6 +52,12 @@ const cards = [
     title: "Environment Variables",
     desc: "Complete reference for all configuration values.",
     href: "/docs/env-variables",
+  },
+  {
+    icon: Bug,
+    title: "Sentry",
+    desc: "Set up error tracking and performance monitoring.",
+    href: "/docs/sentry-setup",
   },
 ];
 

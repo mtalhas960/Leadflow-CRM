@@ -27,6 +27,7 @@ const navSections: { label: string; items: NavItem[] }[] = [
       { label: "Cloudinary", href: "/docs/cloudinary-setup" },
       { label: "Resend", href: "/docs/resend-setup" },
       { label: "Google Calendar", href: "/docs/google-calendar-setup" },
+      { label: "Sentry", href: "/docs/sentry-setup" },
     ],
   },
   {

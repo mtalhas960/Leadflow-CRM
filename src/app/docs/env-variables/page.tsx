@@ -265,6 +265,41 @@ GOOGLE_REDIRECT_URI=https://crm.yourdomain.com/api/auth/google/callback`}</code>
 
       <hr />
 
+      <h2>Sentry (Error Tracking)</h2>
+
+      <p>
+        Sentry captures runtime errors and performance data. It is optional — omit <code>SENTRY_DSN</code> to disable error tracking entirely.
+        See the <a href="/docs/sentry-setup">Sentry Setup Guide</a> for detailed instructions.
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Variable</th>
+            <th>Required</th>
+            <th>Source</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>SENTRY_DSN</code></td>
+            <td>No</td>
+            <td>Sentry Dashboard → Project Settings → DSN</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <pre>
+        <code>{`# Sentry (optional)
+SENTRY_DSN=https://xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx@xxxxxx.ingest.us.sentry.io/xxxxxx`}</code>
+      </pre>
+
+      <Callout type="info">
+        <strong>Performance monitoring:</strong> Sentry also provides tracing for API route performance. Enable it in your <code>sentry.client.config.ts</code> and <code>sentry.server.config.ts</code> files.
+      </Callout>
+
+      <hr />
+
       <h2>General Configuration</h2>
 
       <table>

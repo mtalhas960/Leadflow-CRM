@@ -8,6 +8,7 @@ const items = [
   { id: "cloudinary", label: "Set up Cloudinary · 3 min" },
   { id: "resend", label: "Configure Resend for email · 5 min" },
   { id: "google-calendar", label: "Connect Google Calendar · 5 min" },
+  { id: "sentry", label: "Set up Sentry error tracking · 3 min" },
   { id: "env-vars", label: "Configure environment variables · 2 min" },
   { id: "deploy", label: "Deploy to Vercel · 5 min" },
 ];
