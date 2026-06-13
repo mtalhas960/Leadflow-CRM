@@ -1,5 +1,6 @@
 import { CheckCircle, Github, Terminal } from "lucide-react";
 import type { Metadata } from "next";
+import Image from "next/image";
 
 export const metadata: Metadata = {
   title: "Getting Started · Fork, Clone & Install",
@@ -81,7 +82,7 @@ export default function GettingStartedPage() {
       {/* Fork screenshot — place your fork-screenshot.png in /public/docs/ */}
       <div className="not-prose my-6 overflow-hidden rounded-lg border border-neutral-800 bg-black">
         <img
-          src="/docs/fork-screenshot.png"
+          src="/docs/forkimage.png"
           alt="GitHub Fork button in the top-right corner of the repository page"
           className="w-full"
         />
@@ -120,15 +121,6 @@ cd Leadflow-CRM`}</code>
         This installs Next.js, React, Firebase SDK, and all other dependencies
         defined in <code>package.json</code>. It typically takes 30–60 seconds.
       </p>
-
-      {/* Screenshot placeholder */}
-      <div className="not-prose rounded-lg border border-dashed border-neutral-800 bg-white/[3%] p-8 text-center text-sm text-neutral-400">
-        <Terminal className="mx-auto mb-2 h-8 w-8 text-neutral-600" />
-        <p className="font-medium text-neutral-300">Screenshot: npm install output</p>
-        <p className="mt-1 text-xs text-neutral-500">
-          Show the terminal after running <code>npm install</code> · dependencies installed successfully.
-        </p>
-      </div>
 
       <hr />
 
