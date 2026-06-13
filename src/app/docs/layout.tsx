@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Menu, X } from "lucide-react";
 import { useState } from "react";
+import { CodeBlockCopy } from "@/components/docs/code-block-copy";
 
 interface NavItem {
   label: string;
@@ -177,6 +178,7 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
         {/* Main content */}
         <div className="min-w-0 flex-1 lg:pl-12">
           <div className="prose prose-invert max-w-none">
+            <CodeBlockCopy />
             {children}
           </div>
 
