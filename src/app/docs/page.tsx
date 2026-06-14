@@ -80,7 +80,7 @@ export default function DocsOverview() {
 
       <SetupChecklist />
 
-      <div className="not-prose mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="not-prose mt-10 grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((card) => (
           <Link
             key={card.href}
