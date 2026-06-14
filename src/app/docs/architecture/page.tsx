@@ -173,9 +173,9 @@ export default function ArchitecturePage() {
           <rect width="800" height="300" fill="url(#grid)" />
 
           {/* Labels on left */}
-          <text x="20" y="30" fill="rgb(163,163,163)" fontSize="10" fontWeight="600" textTransform="uppercase" letterSpacing="2">Presentation</text>
-          <text x="20" y="130" fill="rgb(163,163,163)" fontSize="10" fontWeight="600" textTransform="uppercase" letterSpacing="2">Edge</text>
-          <text x="20" y="230" fill="rgb(163,163,163)" fontSize="10" fontWeight="600" textTransform="uppercase" letterSpacing="2">Services</text>
+          <text x="20" y="30" fill="rgb(163,163,163)" fontSize="10" fontWeight="600" style={{ textTransform: "uppercase", letterSpacing: "2px" }}>Presentation</text>
+          <text x="20" y="130" fill="rgb(163,163,163)" fontSize="10" fontWeight="600" style={{ textTransform: "uppercase", letterSpacing: "2px" }}>Edge</text>
+          <text x="20" y="230" fill="rgb(163,163,163)" fontSize="10" fontWeight="600" style={{ textTransform: "uppercase", letterSpacing: "2px" }}>Services</text>
 
           {/* Dashed vertical guides */}
           <line x1="135" y1="40" x2="135" y2="280" stroke="rgb(64,64,64)" strokeWidth="0.5" strokeDasharray="4,4" />
