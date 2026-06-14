@@ -59,21 +59,49 @@ const STATS = [
   { label: "Free & open source", value: "MIT" },
 ];
 
-const TESTIMONIALS = [
+interface Testimonial {
+  quote: string;
+  name: string;
+  role: string;
+  company: string;
+  initials: string;
+  gradient: string;
+  glow: string;
+  stars: number;
+  featured?: boolean;
+}
+
+const TESTIMONIALS: Testimonial[] = [
   {
     quote: "We replaced spreadsheets and two SaaS tools with LeadFlow. Invoices, time tracking, and messaging in one place.",
     name: "Ariana Holt",
-    role: "Growth Lead, Fieldstack",
+    role: "Growth Lead",
+    company: "Fieldstack",
+    initials: "AH",
+    gradient: "from-violet-500 to-purple-600",
+    glow: "rgba(139, 92, 246, 0.15)",
+    stars: 5,
+    featured: true,
   },
   {
     quote: "Open source means we own our data. Self-hosted in 10 minutes, no vendor lock-in, no per-seat pricing surprises.",
     name: "Marcus Lee",
-    role: "RevOps Manager, Harbor",
+    role: "RevOps Manager",
+    company: "Harbor",
+    initials: "ML",
+    gradient: "from-emerald-500 to-teal-600",
+    glow: "rgba(16, 185, 129, 0.15)",
+    stars: 5,
   },
   {
     quote: "The modules actually cover our workflow - leads through invoices. Clients see their own portal. It just works.",
     name: "Priya Das",
-    role: "Founder, Sunpath Studio",
+    role: "Founder",
+    company: "Sunpath Studio",
+    initials: "PD",
+    gradient: "from-amber-500 to-orange-600",
+    glow: "rgba(245, 158, 11, 0.15)",
+    stars: 5,
   },
 ];
 
@@ -513,7 +541,7 @@ export default function LandingPage() {
         {/* ── Testimonials ── */}
         <section id="testimonials" className="scroll-mt-20 mx-auto w-full max-w-6xl px-6 py-16">
           <motion.div
-            className="text-center mb-10"
+            className="text-center mb-12"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-40px" }}
@@ -528,7 +556,7 @@ export default function LandingPage() {
             </h2>
           </motion.div>
           <motion.div
-            className="grid gap-4 md:grid-cols-3"
+            className="grid gap-5 md:grid-cols-3"
             variants={staggerContainer}
             initial="hidden"
             whileInView="visible"
@@ -538,13 +566,68 @@ export default function LandingPage() {
               <motion.div
                 key={t.name}
                 variants={fadeUp}
-                className="rounded-xl border border-border/40 bg-background/40 p-6"
-                whileHover={{ y: -4, transition: { type: "spring", stiffness: 200, damping: 15 } }}
+                className="group relative rounded-xl border border-border/40 bg-background/40 p-6 transition-all duration-300"
+                whileHover={{
+                  y: -6,
+                  transition: { type: "spring", stiffness: 200, damping: 15 },
+                }}
               >
-                <p className="text-sm text-muted-foreground leading-relaxed">&ldquo;{t.quote}&rdquo;</p>
-                <div className="mt-4 border-t border-border/40 pt-4">
-                  <p className="text-sm font-semibold">{t.name}</p>
-                  <p className="text-xs text-muted-foreground">{t.role}</p>
+                {/* Decorative glow on hover */}
+                <div
+                  className="pointer-events-none absolute inset-0 rounded-xl opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+                  style={{
+                    background: `radial-gradient(600px circle at 50% 0%, ${t.glow}, transparent 70%)`,
+                  }}
+                />
+
+                {/* Decorative quote mark */}
+                <div
+                  className="pointer-events-none absolute -top-2 right-4 select-none text-[5rem] leading-none font-serif font-bold"
+                  style={{
+                    background: `linear-gradient(135deg, ${t.glow.replace("0.15", "0.25")}, transparent)`,
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                  }}
+                >
+                  &rdquo;
+                </div>
+
+                {/* Avatar + Stars row */}
+                <div className="relative mb-4 flex items-center gap-3">
+                  <div
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${t.gradient} text-[11px] font-bold text-white shadow-lg`}
+                    style={{
+                      boxShadow: `0 4px 12px ${t.glow}`,
+                    }}
+                  >
+                    {t.initials}
+                  </div>
+                  <div className="flex gap-0.5">
+                    {Array.from({ length: t.stars }).map((_, i) => (
+                      <Star
+                        key={i}
+                        className="h-3.5 w-3.5 fill-amber-400 text-amber-400"
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Quote */}
+                <p className="relative text-sm text-muted-foreground leading-relaxed">
+                  &ldquo;{t.quote}&rdquo;
+                </p>
+
+                {/* Author */}
+                <div className="mt-5 flex items-center gap-2.5 border-t border-border/40 pt-4">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold truncate">{t.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{t.role}</p>
+                  </div>
+                  <span
+                    className="shrink-0 rounded-md border border-border/40 bg-background/60 px-2.5 py-1 text-[10px] font-medium text-muted-foreground tracking-wide uppercase"
+                  >
+                    {t.company}
+                  </span>
                 </div>
               </motion.div>
             ))}

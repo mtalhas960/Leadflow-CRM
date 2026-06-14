@@ -478,7 +478,7 @@ function AnalyticsCard() {
       <p className="text-xs text-muted-foreground/80 leading-relaxed mb-4">
         Revenue, conversion, and time reports.
       </p>
-      <div className="flex items-end justify-between gap-1 rounded-xl border border-border/30 bg-background/20 p-3">
+      <div className="flex items-end justify-between gap-1 rounded-xl border border-border/30 bg-background/20 p-3 h-28">
         {bars.map((h, i) => (
           <motion.div
             key={i}
@@ -500,7 +500,7 @@ function AnalyticsCard() {
         ))}
       </div>
       <div className="mt-2 flex justify-between px-0.5">
-        {["M", "T", "W", "T", "F", "S"].map((d) => (
+        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
           <span key={d} className="text-[9px] text-muted-foreground/40">
             {d}
           </span>
