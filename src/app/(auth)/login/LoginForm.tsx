@@ -1,14 +1,5 @@
 "use client";
 
-import { auth, db } from "@/lib/firebase/client";
-import { DEFAULT_PIPELINE_STAGES } from "@/lib/firebase/workspaces";
-import {
-  GoogleAuthProvider,
-  signInWithEmailAndPassword,
-  signInWithPopup,
-  signOut,
-} from "firebase/auth";
-import { doc, getDoc, setDoc, Timestamp } from "firebase/firestore";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -21,24 +12,27 @@ import { toast } from "@/lib/toast";
 import { canCreateWorkspace } from "@/lib/workspace-permissions";
 import { useDemoMode } from "@/lib/demo/demo-context";
 
+/** Resolve the post-login redirect route without blocking page load. */
+async function resolveRedirect(uid: string): Promise<string> {
+  try {
+    const { db } = await import("@/lib/firebase/client");
+    const { doc: fdoc, getDoc } = await import("firebase/firestore");
+    const userSnap = await getDoc(fdoc(db, "users", uid));
+    if (userSnap.exists()) {
+      const data = userSnap.data();
+      if ((data.workspaceIds || []).length > 1) return "/select-workspace";
+    }
+  } catch {}
+  return "/dashboard";
+}
+
 export function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
   const [formData, setFormData] = useState({ email: "", password: "" });
   const { enterDemo } = useDemoMode();
 
-  const getPostLoginRedirect = async (uid: string): Promise<string> => {
-    try {
-      const userRef = doc(db, "users", uid);
-      const userSnap = await getDoc(userRef);
-      if (userSnap.exists()) {
-        const data = userSnap.data();
-        const wsIds: string[] = data.workspaceIds || [];
-        if (wsIds.length > 1) return "/select-workspace";
-      }
-    } catch {}
-    return "/dashboard";
-  };
+  // ── Email/password login (dynamic import – no Firebase on idle page) ──
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,13 +42,17 @@ export function LoginForm() {
     }
     setLoading(true);
     try {
+      const [{ auth }, { signInWithEmailAndPassword }] = await Promise.all([
+        import("@/lib/firebase/client"),
+        import("firebase/auth"),
+      ]);
       const cred = await signInWithEmailAndPassword(
         auth,
         formData.email,
         formData.password
       );
       toast.success("Logged in successfully");
-      const redirect = await getPostLoginRedirect(cred.user.uid);
+      const redirect = await resolveRedirect(cred.user.uid);
       setTimeout(() => {
         window.location.href = redirect;
       }, 500);
@@ -66,24 +64,38 @@ export function LoginForm() {
     }
   };
 
+  // ── Demo login (no Firebase needed) ────────────────────────────────────
+
   const handleDemoLogin = async () => {
     setDemoLoading(true);
-    // Navigate to dashboard with demo mode active
     enterDemo();
   };
+
+  // ── Google sign-in (dynamic import – only loads OAuth iframe on click) ──
 
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
+      const [
+        { auth, db },
+        { GoogleAuthProvider, signInWithPopup, signOut },
+        { doc: fdoc, getDoc, setDoc, Timestamp },
+        { DEFAULT_PIPELINE_STAGES },
+      ] = await Promise.all([
+        import("@/lib/firebase/client"),
+        import("firebase/auth"),
+        import("firebase/firestore"),
+        import("@/lib/firebase/workspaces"),
+      ]);
+
       const provider = new GoogleAuthProvider();
       const result = await signInWithPopup(auth, provider);
-      const userRef = doc(db, "users", result.user.uid);
+      const userRef = fdoc(db, "users", result.user.uid);
       const userSnap = await getDoc(userRef);
+
       if (!userSnap.exists()) {
         const email = result.user.email;
 
-        // Only whitelisted emails may create workspaces.
-        // Non-whitelisted users must be invited by an existing workspace owner.
         if (!canCreateWorkspace(email)) {
           await signOut(auth);
           toast.error(
@@ -117,9 +129,8 @@ export function LoginForm() {
           lastActiveAt: Timestamp.now(),
         });
 
-        // Create default workspace
         const displayName = result.user.displayName || "User";
-        await setDoc(doc(db, "workspaces", workspaceId), {
+        await setDoc(fdoc(db, "workspaces", workspaceId), {
           id: workspaceId,
           name: `${displayName}'s Workspace`,
           logoUrl: null,
@@ -137,7 +148,7 @@ export function LoginForm() {
         });
       }
       toast.success("Logged in with Google");
-      const redirect = await getPostLoginRedirect(result.user.uid);
+      const redirect = await resolveRedirect(result.user.uid);
       setTimeout(() => {
         window.location.href = redirect;
       }, 500);
@@ -230,6 +241,7 @@ export function LoginForm() {
                   <Label htmlFor="password">Password</Label>
                   <Link
                     href="/forgot-password"
+                    prefetch={false}
                     className="text-xs font-medium text-primary hover:underline"
                   >
                     Forgot password?
@@ -314,6 +326,7 @@ export function LoginForm() {
               Don&apos;t have an account?{" "}
               <Link
                 href="/register"
+                prefetch={false}
                 className="font-medium text-primary hover:underline"
               >
                 Sign up
@@ -321,11 +334,11 @@ export function LoginForm() {
             </p>
             <p className="text-center text-xs text-muted-foreground">
               By continuing, you agree to our{" "}
-              <Link href="/terms" className="font-medium text-primary hover:underline">
+              <Link href="/terms" prefetch={false} className="font-medium text-primary hover:underline">
                 Terms of Service
               </Link>
               {" "}and{" "}
-              <Link href="/privacy" className="font-medium text-primary hover:underline">
+              <Link href="/privacy" prefetch={false} className="font-medium text-primary hover:underline">
                 Privacy Policy
               </Link>
               .
