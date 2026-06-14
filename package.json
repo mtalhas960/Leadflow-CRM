@@ -109,5 +109,9 @@
   "bugs": {
     "url": "https://github.com/Tabish5858/Leadflow-CRM/issues"
   },
-  "homepage": "https://github.com/Tabish5858/Leadflow-CRM#readme"
+  "homepage": "https://github.com/Tabish5858/Leadflow-CRM#readme",
+  "overrides": {
+    "uuid": "^11.1.1",
+    "postcss": "^8.5.10"
+  }
 }
