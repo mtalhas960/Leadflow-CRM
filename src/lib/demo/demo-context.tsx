@@ -10,8 +10,6 @@ import {
   type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
-import { signOut } from "firebase/auth";
-import { auth } from "@/lib/firebase/client";
 import {
   DEMO_USER,
   DEMO_WORKSPACE,
@@ -79,9 +77,11 @@ export function DemoProvider({ children }: { children: ReactNode }) {
       notifications: [...DEMO_NOTIFICATIONS],
       meetings: [...DEMO_MEETINGS],
     });
-    // Try to sign out from Firebase (in case user was previously logged in)
+    // Dynamically import Firebase auth (avoids 90 KiB iframe on pages that never use Firebase)
     try {
-      await signOut(auth);
+      const { auth } = await import("@/lib/firebase/client");
+      const { signOut: firebaseSignOut } = await import("firebase/auth");
+      await firebaseSignOut(auth);
     } catch {
       // Firebase sign out may fail if not authenticated - that's fine
     }
