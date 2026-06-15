@@ -41,6 +41,13 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Cache Next.js build
+        uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: next-build-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            next-build-${{ runner.os }}-
       - run: npm run build
         env:
           NEXT_PUBLIC_FIREBASE_API_KEY: dummy
@@ -49,3 +56,4 @@ jobs:
           NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: dummy.appspot.com
           NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "123456789"
           NEXT_PUBLIC_FIREBASE_APP_ID: "1:123456789:web:abcdef"
+          NEXT_TELEMETRY_DISABLED: "1"
