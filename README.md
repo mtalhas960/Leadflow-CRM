@@ -272,7 +272,7 @@ The demo is pre-loaded with sample data so you can test every feature immediatel
 | File Storage     | Cloudinary (documents), Firebase Storage (fallback)        |
 | Email            | Resend (primary, transactional with open/click tracking), Brevo (optional fallback) |
 | Calendar         | Google Calendar API / Google Meet integration                                       |
-| Scheduling       | n8n Workflow SDK (meeting booking workflows)                                        |
+| Scheduling       | Custom booking engine (public booking pages, timezone-aware slot selection, conflict detection, Google Meet creation) |
 | Charts           | Recharts 2 (line, bar, pie, donut, funnel)                                          |
 | Drag and Drop    | @dnd-kit (core, sortable, utilities)                                                |
 | Tables           | TanStack Table 8                                                                    |
@@ -468,7 +468,7 @@ LeadFlow follows defense-in-depth security practices:
 | Layer              | Protection                                                                                                                       |
 | ------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
 | **Edge**           | Cloudflare WAF (OWASP Core Ruleset, rate limiting, bot management, DDoS protection)                                              |
-| **Database**       | Firestore security rules with role-based -ss -`canWrite()`, `getWorkspaceRole()`, `canManageWorkspace()`, owner-only operations  |
+| **Database**       | Firestore security rules with role-based `canWrite()`, `getWorkspaceRole()`, `canManageWorkspace()`, owner-only operations  |
 | **Application**    | Server Action re-authorization, Admin SDK confined to API routes, `server-only` guards on data access, input validation with Zod |
 | **Authentication** | Firebase Auth with optional MFA, custom password reset tokens (1hr expiry), rate-limited invite acceptance                       |
 | **Audit**          | Full audit trail (who, what, when) on all mutations                                                                              |
@@ -504,7 +504,7 @@ Open issues: [github.com/Tabish5858/Leadflow-CRM/issues](https://github.com/Tabi
 - E2E tests with Playwright
 - Gmail OAuth integration
 - PWA / offline mode
-- Deployment configuration (Vercel / Node.js)
+- Docker deployment / containerized setup
 - App Check enforcement
 - CSP headers
 
