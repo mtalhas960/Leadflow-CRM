@@ -207,45 +207,19 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
             sidebarCollapsed ? "lg:w-20" : "lg:w-64"
           )}
         >
-          {/* ── Collapse Toggle + Mobile Close ── */}
-          <div
-            className={cn(
-              "flex h-10 shrink-0 items-center px-3",
-              sidebarCollapsed ? "justify-center" : "justify-end"
-            )}
-          >
-            {!sidebarCollapsed && (
-              <button
-                type="button"
-                onClick={() => setSidebarCollapsed(true)}
-                className="hidden lg:inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-            )}
-            {sidebarCollapsed && (
-              <button
-                type="button"
-                onClick={() => setSidebarCollapsed(false)}
-                className="hidden lg:inline-flex absolute -right-3 top-5 z-10 h-6 w-6 items-center justify-center rounded-full border bg-background shadow-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-              >
-                <ChevronRight className="h-3 w-3" />
-              </button>
-            )}
-            {/* Mobile close */}
-            <button
-              type="button"
-              className="lg:hidden"
-              onClick={() => setSidebarOpen(false)}
-            >
-              <X className="h-5 w-5 text-muted-foreground" />
-            </button>
+          {/* ── Workspace Switcher (with collapse toggle) ── */}
+          <div className={cn(sidebarCollapsed ? "flex justify-center pt-3 flex-col" : "pt-3")}>
+            <WorkspaceSwitcher collapsed={sidebarCollapsed} onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)} />
           </div>
 
-          {/* ── Workspace Switcher ── */}
-          <div className={cn(sidebarCollapsed ? "flex justify-center pt-3 flex-col" : "pt-3")}>
-            <WorkspaceSwitcher collapsed={sidebarCollapsed} />
-          </div>
+          {/* ── Mobile close ── */}
+          <button
+            type="button"
+            className="lg:hidden absolute top-2 right-2 z-10"
+            onClick={() => setSidebarOpen(false)}
+          >
+            <X className="h-5 w-5 text-muted-foreground" />
+          </button>
 
           {/* ── Navigation ── */}
           <nav

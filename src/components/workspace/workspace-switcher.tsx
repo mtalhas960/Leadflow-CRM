@@ -27,6 +27,8 @@ import {
   Building2,
   Check,
   ChevronsUpDown,
+  ChevronLeft,
+  ChevronRight,
   Plus,
 } from "lucide-react";
 import { useState } from "react";
@@ -40,7 +42,7 @@ function getWorkspaceInitials(name: string): string {
     .slice(0, 2);
 }
 
-export function WorkspaceSwitcher({ collapsed = false }: { collapsed?: boolean }) {
+export function WorkspaceSwitcher({ collapsed = false, onToggleCollapse }: { collapsed?: boolean; onToggleCollapse?: () => void }) {
   const { workspaces, activeWorkspace, switchWorkspace, createNewWorkspace, user } = useWorkspace();
   const { canCreate } = useCanCreateWorkspace();
   const [createOpen, setCreateOpen] = useState(false);
@@ -82,7 +84,7 @@ export function WorkspaceSwitcher({ collapsed = false }: { collapsed?: boolean }
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-10 w-10"
+                className="h-10 w-10 relative group"
                 title={activeWorkspace.name}
               >
                 <Avatar className="h-8 w-8 border bg-primary/10">
@@ -91,23 +93,38 @@ export function WorkspaceSwitcher({ collapsed = false }: { collapsed?: boolean }
                     {getWorkspaceInitials(activeWorkspace.name)}
                   </AvatarFallback>
                 </Avatar>
+                {onToggleCollapse && (
+                  <span className="absolute -right-3 top-1/2 -translate-y-1/2 h-5 w-5 items-center justify-center rounded-full border bg-background shadow-sm text-muted-foreground hidden group-hover:inline-flex hover:bg-accent hover:text-foreground cursor-pointer">
+                    <ChevronRight className="h-3 w-3" />
+                  </span>
+                )}
               </Button>
             ) : (
-              <Button
-                variant="ghost"
-                className="w-full justify-start gap-2 px-2 h-10 text-sm font-medium hover:bg-accent/50 group"
-              >
-                <Avatar className="h-6 w-6 border bg-primary/10">
-                  <AvatarImage src={activeWorkspace.logoUrl || undefined} />
-                  <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                    {getWorkspaceInitials(activeWorkspace.name)}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="flex-1 truncate text-left">
-                  {activeWorkspace.name}
-                </span>
-                <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground shrink-0 opacity-0 group-hover:opacity-100" />
-              </Button>
+              <div className="flex items-center w-full gap-1">
+                <Button
+                  variant="ghost"
+                  className="flex-1 justify-start gap-2 px-2 h-10 text-sm font-medium hover:bg-accent/50"
+                >
+                  <Avatar className="h-6 w-6 border bg-primary/10">
+                    <AvatarImage src={activeWorkspace.logoUrl || undefined} />
+                    <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                      {getWorkspaceInitials(activeWorkspace.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="flex-1 truncate text-left">
+                    {activeWorkspace.name}
+                  </span>
+                </Button>
+                {onToggleCollapse && (
+                  <button
+                    type="button"
+                    onClick={onToggleCollapse}
+                    className="hidden lg:inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
             )}
           </DropdownMenuTrigger>
           <DropdownMenuContent
