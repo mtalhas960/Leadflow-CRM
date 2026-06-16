@@ -1290,7 +1290,7 @@ export default function LandingPage() {
 
         {/* CTA */}
         <section className="mx-auto w-full max-w-6xl px-6 pb-20">
-          <motion.div className="rounded-2xl border border-white/10 bg-white/[0.02] p-8 text-center sm:p-12"
+          <motion.div className="rounded-2xl border border-white/10 bg-white/2 p-6 text-center sm:p-12"
             variants={scaleFade} initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-60px" }}>
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">Try it now. No signup needed.</h2>
             <p className="mt-3 text-zinc-400 max-w-lg mx-auto">One click into a fully-loaded workspace with real demo data. Invoices, projects, documents — all pre-configured.</p>
@@ -1314,17 +1314,17 @@ export default function LandingPage() {
 
       {/* Footer */}
       <motion.footer className="border-t border-white/10" initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}>
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-10 text-sm md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-2.5 h-8">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-6 py-10 pb-2 text-sm md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-2.5 h-8 md:flex-row flex-col">
             <Logo /><span className="font-semibold">LeadFlow</span>
           </div>
-          <div className="flex flex-wrap items-center gap-4 text-zinc-500">
-            <Link href="/docs" className="hover:text-white transition-colors">Docs</Link>
-            <a href="https://github.com/Tabish5858/Leadflow-CRM" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-white transition-colors"><Github className="h-4 w-4" /> GitHub</a>
-            <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
-            <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
-            <a href="mailto:contact@tabishbinishfaq.dev" className="hover:text-white transition-colors">Contact</a>
-            <span className="text-zinc-600">MIT License</span>
+          <div className="flex flex-wrap items-center gap-4 text-zinc-500 md:justify-start justify-between mt-6">
+            <Link href="/docs" className="hover:text-white transition-colors sm:text-sm text-xs">Docs</Link>
+            <Link href="https://github.com/Tabish5858/Leadflow-CRM" target="_blank" rel="noopener noreferrer" className="sm:flex items-center gap-1.5 hover:text-white transition-colors max-h-5 min-h-5 h-5 sm:text-sm text-xs"><Github className="h-4 w-4 max-h-4 min-h-4 sm:block hidden" /> GitHub</Link>
+            <Link href="/privacy" className="hover:text-white transition-colors sm:text-sm text-xs">Privacy</Link>
+            <Link href="/terms" className="hover:text-white transition-colors sm:text-sm text-xs">Terms</Link>
+            <a href="mailto:contact@tabishbinishfaq.dev" className="hover:text-white transition-colors sm:text-sm text-xs">Contact</a>
+            <span className="text-zinc-600 sm:block hidden">MIT License</span>
           </div>
         </div>
       </motion.footer>
