@@ -80,21 +80,33 @@ export function WorkspaceSwitcher({ collapsed = false, onToggleCollapse }: { col
       <div className="pt-3 px-3 flex justify-center items-center w-full">
         <DropdownMenu>
           {collapsed ? (
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-10 w-10 relative group"
-                title={activeWorkspace.name}
-              >
-                <Avatar className="h-8 w-8 border bg-primary/10">
-                  <AvatarImage src={activeWorkspace.logoUrl || undefined} />
-                  <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                    {getWorkspaceInitials(activeWorkspace.name)}
-                  </AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
+            <div className="flex flex-col items-center gap-1">
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-10"
+                  title={activeWorkspace.name}
+                >
+                  <Avatar className="h-8 w-8 border bg-primary/10">
+                    <AvatarImage src={activeWorkspace.logoUrl || undefined} />
+                    <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                      {getWorkspaceInitials(activeWorkspace.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              {onToggleCollapse && (
+                <button
+                  type="button"
+                  onClick={onToggleCollapse}
+                  className="hidden lg:inline-flex h-5 w-5 items-center justify-center rounded-full border bg-background shadow-sm text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer"
+                  title="Expand sidebar"
+                >
+                  <ChevronRight className="h-3 w-3" />
+                </button>
+              )}
+            </div>
           ) : (
             <div className="flex items-center w-full gap-1">
               <DropdownMenuTrigger asChild>
