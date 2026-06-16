@@ -80,7 +80,7 @@ export function WorkspaceSwitcher({ collapsed = false, onToggleCollapse }: { col
       <div className="pt-3 px-3 flex justify-center items-center w-full">
         <DropdownMenu>
           {collapsed ? (
-            <div className="flex flex-col items-center gap-1">
+            <div className="relative group/ws">
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
@@ -100,7 +100,7 @@ export function WorkspaceSwitcher({ collapsed = false, onToggleCollapse }: { col
                 <button
                   type="button"
                   onClick={onToggleCollapse}
-                  className="hidden lg:inline-flex h-5 w-5 items-center justify-center rounded-full border bg-background shadow-sm text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer"
+                  className="absolute -right-3 top-1/2 -translate-y-1/2 h-6 w-6 items-center justify-center rounded-full border bg-background shadow-sm text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer opacity-0 group-hover/ws:opacity-100 transition-opacity z-10"
                   title="Expand sidebar"
                 >
                   <ChevronRight className="h-3 w-3" />
