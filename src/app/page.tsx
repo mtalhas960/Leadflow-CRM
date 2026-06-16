@@ -8,10 +8,13 @@ import {
   BarChart3,
   BookOpen,
   Calendar,
+  Check,
   CheckCircle,
   CheckCircle2,
   ChevronDown,
   Clock,
+  DollarSign,
+  Download,
   ExternalLink,
   FileSignature,
   FileText,
@@ -35,7 +38,6 @@ import {
   Filter,
   ArrowUpRight,
   TrendingUp,
-  DollarSign,
   Timer,
   Send,
   Paperclip,
@@ -43,7 +45,6 @@ import {
   Play,
   Pause,
   Square,
-  Download,
   Eye,
   PenLine,
   Trash2,
@@ -192,6 +193,26 @@ function MockAvatar({ letter, color = "bg-zinc-700" }: { letter: string; color?:
   return <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${color} text-[11px] font-bold text-white`}>{letter}</div>;
 }
 
+// ─── Mock Browser Frame ────────────────────────────────────────────────────
+
+function MockBrowserFrame({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`rounded-2xl border border-white/10 bg-white/[0.02] p-1 shadow-2xl shadow-black/50 ${className}`}>
+      <div className="flex items-center gap-1.5 px-4 py-2.5 border-b border-white/5">
+        <div className="flex gap-1.5 shrink-0">
+          <div className="h-2.5 w-2.5 rounded-full bg-red-500/70" />
+          <div className="h-2.5 w-2.5 rounded-full bg-amber-500/70" />
+          <div className="h-2.5 w-2.5 rounded-full bg-emerald-500/70" />
+        </div>
+        <div className="flex-1 mx-2 sm:mx-4 h-5 rounded-md bg-white/[0.04] flex items-center px-2 overflow-hidden">
+          <span className="text-[10px] text-zinc-600 truncate">app.leadflow.dev</span>
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+}
+
 // ─── Dashboard Preview Section ─────────────────────────────────────────────
 
 // ─── Mock card helpers ──────────────────────────────────────────────────────
@@ -222,7 +243,7 @@ function DashboardPreview() {
     <section id="dashboard" className="scroll-mt-20 mx-auto w-full max-w-6xl px-6 py-16">
       <SectionHeader badge="Command Center" title="Your Workspace Dashboard" description="Six cards, every module. Drag to reorder. Real-time updates. Exactly what you see after signup." />
       <motion.div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-60px" }} transition={{ type: "spring", stiffness: 80, damping: 18 }}>
-        
+
         {/* My Tasks */}
         <MockCard title="My Tasks" description="Tasks assigned to you" action="View All">
           <div className="space-y-0.5">
@@ -458,40 +479,103 @@ function LeadsPreview() {
 // ─── Projects Preview ─────────────────────────────────────────────────────
 
 function ProjectsPreview() {
-  const projects = [
-    { name: "Website Redesign", progress: 75, budget: "$15,000", deadline: "In 14 days", color: "bg-blue-500" },
-    { name: "Mobile App v2", progress: 45, budget: "$28,500", deadline: "In 30 days", color: "bg-purple-500" },
-    { name: "API Integration", progress: 90, budget: "$9,200", deadline: "In 3 days", color: "bg-emerald-500" },
-  ];
   return (
     <section id="projects" className="scroll-mt-20 mx-auto w-full max-w-6xl px-6 py-16 border-t border-white/5">
       <SectionHeader badge="Project Management" title="Projects" description="Kanban boards, milestones, deliverables, and team collaboration — all in one place." />
-      <motion.div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5" initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-60px" }} transition={{ type: "spring", stiffness: 80, damping: 18 }}>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2 text-xs text-zinc-400"><Filter className="h-3 w-3" /> All Projects</div>
-          <div className="flex items-center gap-1.5 rounded-md bg-primary/20 text-primary px-3 py-1.5 text-xs font-medium"><Plus className="h-3 w-3" /> New Project</div>
-        </div>
-        <div className="space-y-3">
-          {projects.map((p) => (
-            <div key={p.name} className="rounded-lg border border-white/5 bg-white/[0.02] p-4 flex items-center gap-4">
-              <div className={`h-10 w-10 rounded-lg ${p.color} opacity-80`} />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">{p.name}</span>
-                  <span className="text-xs text-zinc-500">{p.deadline}</span>
+      <motion.div initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-60px" }} transition={{ type: "spring", stiffness: 80, damping: 18 }}>
+        <MockBrowserFrame>
+          <div className="flex flex-col lg:flex-row">
+            {/* Sidebar — hidden on small screens, shown sm+ */}
+            <div className="lg:w-56 shrink-0 border-b lg:border-b-0 lg:border-r border-white/5 p-3 space-y-1.5 hidden sm:block overflow-x-auto">
+              <div className="text-xs font-medium text-zinc-500 px-2 mb-2 uppercase tracking-wide flex items-center gap-1.5"><FolderKanban className="h-3 w-3" />Projects</div>
+              {[
+                { name: "Website Redesign", active: true },
+                { name: "Mobile App v2", active: false },
+                { name: "API Integration", active: false },
+              ].map((p) => (
+                <div key={p.name} className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs cursor-pointer transition-colors ${p.active ? "bg-primary/10 text-primary font-medium" : "text-zinc-400 hover:bg-white/[0.04]"}`}>
+                  <div className={`h-2 w-2 rounded-full ${p.active ? "bg-primary" : "bg-zinc-600"}`} />
+                  <span className="truncate">{p.name}</span>
                 </div>
-                <div className="flex items-center gap-3 mt-2">
-                  <div className="flex-1 h-1.5 rounded-full bg-zinc-800">
-                    <div className={`h-full rounded-full ${p.color}`} style={{ width: `${p.progress}%` }} />
+              ))}
+            </div>
+            {/* Detail view */}
+            <div className="flex-1 p-4 sm:p-5 min-w-0">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-base font-bold">Website Redesign</h3>
+                    <MockBadge className="bg-emerald-500/10 text-emerald-400">Active</MockBadge>
                   </div>
-                  <span className="text-[11px] text-zinc-500">{p.progress}%</span>
-                  <span className="text-[11px] text-emerald-400 ml-2">{p.budget}</span>
+                  <p className="text-xs text-zinc-500 mt-0.5">Project Lead: Sarah Chen</p>
+                </div>
+                <div className="flex items-center gap-3 text-xs text-zinc-500 flex-wrap">
+                  <span className="flex items-center gap-1"><DollarSign className="h-3 w-3" /> $15,000</span>
+                  <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> Due in 14 days</span>
                 </div>
               </div>
-              <MoreHorizontal className="h-4 w-4 text-zinc-600" />
+              {/* Progress */}
+              <div className="mb-5">
+                <div className="flex items-center justify-between text-xs mb-1.5">
+                  <span className="text-zinc-400">Progress</span>
+                  <span className="text-zinc-300 font-medium">75%</span>
+                </div>
+                <div className="h-2 rounded-full bg-zinc-800 overflow-hidden">
+                  <div className="h-full w-3/4 rounded-full bg-gradient-to-r from-blue-500 to-primary" />
+                </div>
+              </div>
+              {/* Tasks */}
+              <div className="mb-5">
+                <h4 className="text-xs font-medium text-zinc-400 uppercase tracking-wide mb-2">Tasks</h4>
+                <div className="space-y-0.5">
+                  {[
+                    { name: "Homepage redesign", due: "Today", assignee: "SC", done: true, color: "bg-emerald-500" },
+                    { name: "API integration", due: "In 7 days", assignee: "MJ", done: false, color: "bg-amber-500" },
+                    { name: "Mobile responsive", due: "In 14 days", assignee: null, done: false },
+                    { name: "QA testing", due: "In 21 days", assignee: null, done: false },
+                  ].map((t) => (
+                    <div key={t.name} className="flex items-center gap-2.5 rounded-lg px-3 py-2 hover:bg-white/[0.04] cursor-pointer transition-colors">
+                      <div className={`h-4 w-4 rounded border flex items-center justify-center shrink-0 transition-colors ${t.done ? "bg-emerald-500 border-emerald-500" : "border-zinc-600"}`}>
+                        {t.done && <Check className="h-3 w-3 text-white" />}
+                      </div>
+                      <span className={`text-xs flex-1 min-w-0 truncate ${t.done ? "text-zinc-500 line-through" : "text-zinc-200"}`}>{t.name}</span>
+                      <span className={`text-[10px] shrink-0 ${t.due === "Today" ? "text-amber-400 font-medium" : "text-zinc-500"}`}>{t.due}</span>
+                      {t.assignee && <div className={`h-5 w-5 rounded-full ${t.color || "bg-zinc-600"} flex items-center justify-center text-[8px] font-bold text-white shrink-0`}>{t.assignee}</div>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {/* Team & Milestones */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div>
+                  <h4 className="text-xs font-medium text-zinc-400 uppercase tracking-wide mb-2">Team</h4>
+                  <div className="flex items-center">
+                    {[
+                      { initials: "SC", color: "bg-violet-500" },
+                      { initials: "MJ", color: "bg-amber-500" },
+                      { initials: "ER", color: "bg-primary" },
+                    ].map((m, i) => (
+                      <div key={m.initials} className={`h-7 w-7 rounded-full ${m.color} flex items-center justify-center text-[9px] font-bold text-white border-2 border-zinc-900 -ml-1.5 first:ml-0`}>{m.initials}</div>
+                    ))}
+                    <div className="h-7 w-7 rounded-full border border-dashed border-zinc-600 flex items-center justify-center text-zinc-500 -ml-1.5"><Plus className="h-3 w-3" /></div>
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-xs font-medium text-zinc-400 uppercase tracking-wide mb-2">Milestones</h4>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    {["Design", "Dev", "QA", "Launch"].map((m, i) => (
+                      <div key={m} className="flex items-center gap-1 text-[10px]">
+                        <div className={`h-2 w-2 rounded-full shrink-0 ${i < 2 ? "bg-emerald-400" : i === 2 ? "bg-zinc-600" : "bg-zinc-700"}`} />
+                        <span className={i < 2 ? "text-zinc-300" : "text-zinc-600"}>{m}</span>
+                        {i < 3 && <span className="text-zinc-700 mx-0.5">-</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
-          ))}
-        </div>
+          </div>
+        </MockBrowserFrame>
       </motion.div>
     </section>
   );
@@ -500,31 +584,83 @@ function ProjectsPreview() {
 // ─── Invoices Preview ─────────────────────────────────────────────────────
 
 function InvoicesPreview() {
-  const invoices = [
-    { id: "INV-2026-001", client: "TechCorp Inc", amount: "$16,500", status: "Paid", color: "bg-emerald-500/10 text-emerald-400" },
-    { id: "INV-2026-002", client: "Startup.io", amount: "$2,450", status: "Sent", color: "bg-blue-500/10 text-blue-400" },
-    { id: "INV-2026-003", client: "Acme Inc", amount: "$13,200", status: "Draft", color: "bg-zinc-500/10 text-zinc-400" },
-    { id: "INV-2026-004", client: "DevLabs", amount: "$8,900", status: "Overdue", color: "bg-red-500/10 text-red-400" },
-  ];
   return (
     <section id="invoices" className="scroll-mt-20 mx-auto w-full max-w-6xl px-6 py-16 border-t border-white/5">
       <SectionHeader badge="Billing & Payments" title="Invoices" description="Create, send, and track invoices with line items, tax calculation, and payment status." />
-      <motion.div className="rounded-2xl border border-white/10 bg-white/[0.02] overflow-hidden" initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-60px" }} transition={{ type: "spring", stiffness: 80, damping: 18 }}>
-        <div className="flex items-center justify-between p-4 border-b border-white/5">
-          <div className="flex gap-2 text-xs"><span className="px-3 py-1 rounded-full bg-white/[0.04] text-zinc-200">All</span><span className="px-3 py-1 rounded-full text-zinc-500">Paid</span><span className="px-3 py-1 rounded-full text-zinc-500">Pending</span><span className="px-3 py-1 rounded-full text-zinc-500">Overdue</span></div>
-          <div className="flex items-center gap-1.5 rounded-md bg-primary/20 text-primary px-3 py-1.5 text-xs font-medium"><Plus className="h-3 w-3" /> New Invoice</div>
-        </div>
-        <div className="grid grid-cols-2 gap-3 p-4">
-          {invoices.map((inv) => (
-            <div key={inv.id} className="rounded-lg border border-white/5 bg-white/[0.02] p-3 flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2"><span className="text-sm font-medium">{inv.client}</span><MockBadge className={inv.color}>{inv.status}</MockBadge></div>
-                <span className="text-[11px] text-zinc-500 mt-0.5 block">{inv.id}</span>
-              </div>
-              <span className="text-sm font-bold text-emerald-400">{inv.amount}</span>
+      <motion.div initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-60px" }} transition={{ type: "spring", stiffness: 80, damping: 18 }}>
+        <MockBrowserFrame>
+          <div className="flex flex-col lg:flex-row">
+            {/* Sidebar */}
+            <div className="lg:w-56 shrink-0 border-b lg:border-b-0 lg:border-r border-white/5 p-3 space-y-1.5 hidden sm:block">
+              <div className="text-xs font-medium text-zinc-500 px-2 mb-2 uppercase tracking-wide flex items-center gap-1.5"><Receipt className="h-3 w-3" />Invoices</div>
+              {[
+                { id: "INV-2026-001", client: "TechCorp Inc", amount: "$16,500" },
+                { id: "INV-2026-002", client: "Startup.io", amount: "$2,450" },
+                { id: "INV-2026-003", client: "Acme Inc", amount: "$13,200" },
+              ].map((inv) => (
+                <div key={inv.id} className="rounded-lg px-3 py-2 hover:bg-white/[0.04] cursor-pointer transition-colors">
+                  <div className="flex items-center justify-between gap-2"><span className="text-xs font-medium text-zinc-200 truncate">{inv.client}</span><span className="text-xs text-emerald-400 font-medium shrink-0">{inv.amount}</span></div>
+                  <span className="text-[10px] text-zinc-500">{inv.id}</span>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+            {/* Invoice detail */}
+            <div className="flex-1 p-4 sm:p-5 min-w-0">
+              <div className="flex items-start justify-between gap-3 flex-wrap mb-5">
+                <div>
+                  <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-medium">Invoice</span>
+                  <h3 className="text-lg font-bold mt-0.5">INV-2026-001</h3>
+                </div>
+                <MockBadge className="bg-emerald-500/10 text-emerald-400 text-xs px-2.5 py-1">Paid</MockBadge>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-5 text-xs">
+                <div><span className="text-zinc-500 block">From</span><span className="text-zinc-200 font-medium">LeadFlow Inc</span></div>
+                <div><span className="text-zinc-500 block">To</span><span className="text-zinc-200 font-medium">TechCorp Inc</span></div>
+                <div><span className="text-zinc-500 block">Date</span><span className="text-zinc-200">Jun 15, 2026</span></div>
+                <div><span className="text-zinc-500 block">Due</span><span className="text-zinc-200">Jul 15, 2026</span></div>
+              </div>
+              {/* Line items table */}
+              <div className="overflow-x-auto mb-5 -mx-4 sm:-mx-5 px-4 sm:px-5">
+                <table className="w-full text-xs border-collapse min-w-[400px]">
+                  <thead>
+                    <tr className="border-b border-white/5 text-zinc-500">
+                      <th className="text-left py-2 pr-3 font-medium">Description</th>
+                      <th className="text-right px-3 py-2 font-medium">Qty</th>
+                      <th className="text-right px-3 py-2 font-medium">Rate</th>
+                      <th className="text-right pl-3 py-2 font-medium">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { desc: "Web Design & Development", qty: "1", rate: "$12,000", amount: "$12,000" },
+                      { desc: "Hosting & Maintenance (12 mos)", qty: "12", rate: "$300", amount: "$3,600" },
+                      { desc: "Consulting Hours", qty: "5", rate: "$180", amount: "$900" },
+                    ].map((li) => (
+                      <tr key={li.desc} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors">
+                        <td className="py-2.5 pr-3 text-zinc-200">{li.desc}</td>
+                        <td className="text-right px-3 py-2.5 text-zinc-400">{li.qty}</td>
+                        <td className="text-right px-3 py-2.5 text-zinc-400">{li.rate}</td>
+                        <td className="text-right pl-3 py-2.5 text-zinc-200 font-medium">{li.amount}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {/* Totals */}
+              <div className="flex flex-col items-end gap-1 text-xs mb-5">
+                <div className="flex items-center justify-between w-full sm:w-48"><span className="text-zinc-500">Subtotal</span><span className="text-zinc-200">$16,500</span></div>
+                <div className="flex items-center justify-between w-full sm:w-48"><span className="text-zinc-500">Tax (5%)</span><span className="text-zinc-200">$825</span></div>
+                <div className="flex items-center justify-between w-full sm:w-48 pt-1.5 border-t border-white/5"><span className="text-zinc-200 font-medium">Total</span><span className="text-base font-bold text-emerald-400">$17,325</span></div>
+              </div>
+              {/* Actions */}
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" className="text-xs gap-1.5"><Download className="h-3 w-3" /> Download</Button>
+                <Button variant="ghost" size="sm" className="text-xs gap-1.5"><Send className="h-3 w-3" /> Send Reminder</Button>
+                <Button variant="ghost" size="sm" className="text-xs gap-1.5"><PenLine className="h-3 w-3" /> Edit</Button>
+              </div>
+            </div>
+          </div>
+        </MockBrowserFrame>
       </motion.div>
     </section>
   );
@@ -686,27 +822,78 @@ function ContractsPreview() {
   return (
     <section id="contracts" className="scroll-mt-20 mx-auto w-full max-w-6xl px-6 py-16 border-t border-white/5">
       <SectionHeader badge="Agreements" title="Contracts & Proposals" description="Create proposals, contracts, and agreements with e-signature workflows and activity tracking." />
-      <motion.div className="rounded-2xl border border-white/10 bg-white/[0.02] overflow-hidden" initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-60px" }} transition={{ type: "spring", stiffness: 80, damping: 18 }}>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4">
-          {[
-            { title: "Website Redesign Proposal", client: "TechCorp", status: "Signed", color: "text-emerald-400", bg: "bg-emerald-500/10" },
-            { title: "Social Media Management", client: "Startup.io", status: "Sent", color: "text-blue-400", bg: "bg-blue-500/10" },
-            { title: "Service Agreement Draft", client: "Acme Inc", status: "Draft", color: "text-zinc-400", bg: "bg-zinc-500/10" },
-          ].map((c) => (
-            <div key={c.title} className="rounded-lg border border-white/5 bg-white/[0.02] p-4">
-              <div className="flex items-center gap-2 mb-3"><FileSignature className="h-4 w-4 text-zinc-600" /><span className="text-[10px] text-zinc-500 uppercase tracking-wide">Proposal</span></div>
-              <h4 className="text-sm font-medium leading-snug">{c.title}</h4>
-              <p className="text-[11px] text-zinc-500 mt-1">{c.client}</p>
-              <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
-                <MockBadge className={c.bg + " " + c.color}>{c.status}</MockBadge>
-                <div className="flex items-center gap-1.5">
-                  <Eye className="h-3.5 w-3.5 text-zinc-600" />
-                  <PenLine className="h-3.5 w-3.5 text-zinc-600" />
+      <motion.div initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-60px" }} transition={{ type: "spring", stiffness: 80, damping: 18 }}>
+        <MockBrowserFrame>
+          <div className="flex flex-col lg:flex-row">
+            {/* Sidebar */}
+            <div className="lg:w-56 shrink-0 border-b lg:border-b-0 lg:border-r border-white/5 p-3 space-y-1.5 hidden sm:block">
+              <div className="text-xs font-medium text-zinc-500 px-2 mb-2 uppercase tracking-wide flex items-center gap-1.5"><FileSignature className="h-3 w-3" />Contracts</div>
+              {[
+                { name: "Service Agreement", client: "TechCorp", active: true },
+                { name: "Social Media Mgmt", client: "Startup.io", active: false },
+                { name: "Draft — Acme Inc", client: "Acme", active: false },
+              ].map((c) => (
+                <div key={c.name} className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs cursor-pointer transition-colors ${c.active ? "bg-primary/10 text-primary font-medium" : "text-zinc-400 hover:bg-white/[0.04]"}`}>
+                  <FileSignature className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{c.name}</span>
+                </div>
+              ))}
+            </div>
+            {/* Detail */}
+            <div className="flex-1 p-4 sm:p-5 min-w-0">
+              <div className="flex items-start justify-between gap-3 flex-wrap mb-4">
+                <div>
+                  <h3 className="text-base font-bold">Service Agreement</h3>
+                  <p className="text-xs text-zinc-500 mt-0.5">Provider: LeadFlow Inc &middot; Client: TechCorp Inc</p>
+                </div>
+                <MockBadge className="bg-emerald-500/10 text-emerald-400">Signed</MockBadge>
+              </div>
+              {/* Content preview */}
+              <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3 sm:p-4 mb-4">
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  This Service Agreement is entered into between LeadFlow Inc (&ldquo;Provider&rdquo;) and TechCorp Inc (&ldquo;Client&rdquo;).
+                  The Provider agrees to deliver web design and development services as outlined in the attached Statement
+                  of Work. Payment terms: 50% upfront, 50% upon completion&hellip;
+                </p>
+              </div>
+              {/* Signatures */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                {[
+                  { name: "James Wilson", title: "CEO, LeadFlow Inc", signed: true },
+                  { name: "Sarah Chen", title: "CTO, TechCorp Inc", signed: true },
+                ].map((s) => (
+                  <div key={s.name} className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="h-6 w-6 rounded-full bg-emerald-500/20 flex items-center justify-center"><Check className="h-3 w-3 text-emerald-400" /></div>
+                      <span className="text-xs font-medium">{s.name}</span>
+                    </div>
+                    <p className="text-[10px] text-zinc-500">{s.title}</p>
+                    <p className="text-[10px] text-zinc-600 mt-0.5">Signed Jun 14, 2026</p>
+                  </div>
+                ))}
+              </div>
+              {/* Activity */}
+              <div>
+                <h4 className="text-xs font-medium text-zinc-400 uppercase tracking-wide mb-2">Activity</h4>
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px]">
+                  {[
+                    { label: "Created", time: "Jun 1", done: true },
+                    { label: "Sent", time: "Jun 2", done: true },
+                    { label: "Viewed", time: "Jun 3", done: true },
+                    { label: "Signed", time: "Jun 14", done: true },
+                  ].map((a, i) => (
+                    <div key={a.label} className="flex items-center gap-1">
+                      <div className={`h-1.5 w-1.5 rounded-full shrink-0 ${a.done ? "bg-emerald-400" : "bg-zinc-700"}`} />
+                      <span className={a.done ? "text-zinc-300" : "text-zinc-600"}>{a.label}</span>
+                      <span className="text-zinc-600">{a.time}</span>
+                      {i < 3 && <span className="text-zinc-700 mx-0.5">&rarr;</span>}
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
-          ))}
-        </div>
+          </div>
+        </MockBrowserFrame>
       </motion.div>
     </section>
   );
@@ -718,40 +905,94 @@ function AnalyticsPreview() {
   return (
     <section id="analytics" className="scroll-mt-20 mx-auto w-full max-w-6xl px-6 py-16 border-t border-white/5">
       <SectionHeader badge="Insights" title="Analytics & Reports" description="Revenue charts, conversion funnels, time reports, KPI cards, and exportable PDF reports." />
-      <motion.div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5" initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-60px" }} transition={{ type: "spring", stiffness: 80, damping: 18 }}>
+      <motion.div className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 sm:p-5" initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-60px" }} transition={{ type: "spring", stiffness: 80, damping: 18 }}>
+        {/* Period tabs */}
+        <div className="flex items-center justify-between mb-5 flex-wrap gap-2">
+          <div className="flex gap-1 text-xs">
+            {["7d", "30d", "90d", "1y"].map((p) => (
+              <span key={p} className={`px-3 py-1.5 rounded-md cursor-pointer transition-colors ${p === "30d" ? "bg-white/[0.06] text-zinc-200 font-medium" : "text-zinc-500 hover:text-zinc-300"}`}>{p}</span>
+            ))}
+          </div>
+          <Button variant="outline" size="sm" className="text-xs gap-1.5"><Download className="h-3 w-3" /> Export</Button>
+        </div>
         {/* KPI Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
           {[
-            { label: "Total Revenue", value: "$128.5k", change: "+12.3%", color: "text-emerald-400" },
-            { label: "Active Leads", value: "1,248", change: "+8.1%", color: "text-blue-400" },
-            { label: "Conversion", value: "24.6%", change: "+3.2%", color: "text-violet-400" },
-            { label: "Hours Logged", value: "342h", change: "+18.5%", color: "text-amber-400" },
+            { label: "Total Revenue", value: "$128.5k", change: "+12.3%", icon: DollarSign, up: true },
+            { label: "Active Leads", value: "1,248", change: "+8.1%", icon: Users, up: true },
+            { label: "Conversion Rate", value: "24.6%", change: "+3.2%", icon: TrendingUp, up: true },
+            { label: "Hours Logged", value: "342h", change: "-2.1%", icon: Clock, up: false },
           ].map((kpi) => (
-            <div key={kpi.label} className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
-              <span className="text-[11px] text-zinc-500">{kpi.label}</span>
-              <div className="flex items-end gap-1.5 mt-1">
-                <span className={`text-lg font-bold ${kpi.color}`}>{kpi.value}</span>
-                <span className="text-[10px] text-emerald-400">{kpi.change}</span>
+            <div key={kpi.label} className="rounded-lg border border-white/5 bg-white/[0.02] p-3 hover:border-white/10 transition-colors">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] text-zinc-500 truncate">{kpi.label}</span>
+                <div className="h-6 w-6 rounded-lg bg-primary/10 flex items-center justify-center shrink-0"><kpi.icon className="h-3 w-3 text-primary" /></div>
+              </div>
+              <div className="flex items-end gap-1.5 flex-wrap">
+                <span className="text-lg font-bold tabular-nums text-zinc-100">{kpi.value}</span>
+                <span className={`text-[10px] ${kpi.up ? "text-emerald-400" : "text-red-400"}`}>{kpi.change}</span>
               </div>
             </div>
           ))}
         </div>
-        {/* Chart area */}
-        <div className="rounded-lg border border-white/5 bg-white/[0.02] p-4">
-          <div className="flex items-center justify-between mb-3"><span className="text-xs font-medium text-zinc-400">Revenue Over Time</span><span className="text-[10px] text-zinc-500">Last 6 months</span></div>
-          <div className="flex items-end gap-2 h-32">
-            {[30, 45, 35, 60, 50, 80].map((h, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                <span className="text-[10px] text-zinc-500">${h}k</span>
-                <div className="w-full rounded-t bg-primary/30 hover:bg-primary/50 transition-colors" style={{ height: `${h / 80 * 100}%` }} />
-                <span className="text-[10px] text-zinc-600">{["Jan", "Feb", "Mar", "Apr", "May", "Jun"][i]}</span>
+        {/* Chart area — stacked bars */}
+        <div className="rounded-lg border border-white/5 bg-white/[0.02] p-4 mb-5">
+          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <span className="text-xs font-medium text-zinc-400">Revenue Over Time</span>
+            <div className="flex items-center gap-3 text-[10px] text-zinc-500">
+              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-primary/60" /> Revenue</span>
+              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-400/50" /> Expenses</span>
+            </div>
+          </div>
+          <div className="flex items-end gap-1.5 sm:gap-3 h-40">
+            {[
+              { revenue: 30, expenses: 20, label: "Jan" },
+              { revenue: 45, expenses: 28, label: "Feb" },
+              { revenue: 35, expenses: 22, label: "Mar" },
+              { revenue: 60, expenses: 35, label: "Apr" },
+              { revenue: 50, expenses: 30, label: "May" },
+              { revenue: 80, expenses: 42, label: "Jun" },
+            ].map((m) => (
+              <div key={m.label} className="flex-1 flex flex-col items-center gap-1.5 min-w-0">
+                <div className="relative w-full flex items-end justify-center gap-0.5" style={{ height: `${Math.max(m.revenue, 35)}%` }}>
+                  <div className="w-1/2 max-w-[30px] rounded-t bg-primary/40 hover:bg-primary/60 transition-colors" style={{ height: `${m.revenue}%` }} />
+                  <div className="w-1/2 max-w-[30px] rounded-t bg-emerald-400/30 hover:bg-emerald-400/50 transition-colors" style={{ height: `${m.expenses}%` }} />
+                </div>
+                <span className="text-[10px] text-zinc-600">{m.label}</span>
               </div>
             ))}
           </div>
         </div>
-        <div className="flex items-center gap-2 mt-3">
-          <Button variant="outline" size="sm" className="text-xs gap-1.5"><Download className="h-3 w-3" /> Export PDF</Button>
-          <Button variant="ghost" size="sm" className="text-xs gap-1.5"><Download className="h-3 w-3" /> Export CSV</Button>
+        {/* Funnel + Quick Actions */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="rounded-lg border border-white/5 bg-white/[0.02] p-4">
+            <span className="text-xs font-medium text-zinc-400 block mb-3">Conversion Funnel</span>
+            <div className="space-y-2.5">
+              {[
+                { label: "Leads", count: "1,248", pct: 100, color: "bg-blue-500" },
+                { label: "Qualified", count: "486", pct: 39, color: "bg-primary" },
+                { label: "Proposal", count: "215", pct: 17, color: "bg-violet-500" },
+                { label: "Closed Won", count: "98", pct: 8, color: "bg-emerald-500" },
+              ].map((f) => (
+                <div key={f.label} className="flex items-center gap-2 text-xs">
+                  <span className="w-16 text-zinc-500 shrink-0">{f.label}</span>
+                  <div className="flex-1 h-5 rounded bg-zinc-800 overflow-hidden">
+                    <div className={`h-full rounded ${f.color} opacity-60`} style={{ width: `${f.pct}%` }} />
+                  </div>
+                  <span className="w-12 text-right text-zinc-300 shrink-0 tabular-nums">{f.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-lg border border-white/5 bg-white/[0.02] p-4 flex flex-col">
+            <span className="text-xs font-medium text-zinc-400 block mb-3">Quick Actions</span>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" className="text-xs gap-1.5"><FileText className="h-3 w-3" /> PDF Report</Button>
+              <Button variant="outline" size="sm" className="text-xs gap-1.5"><BarChart3 className="h-3 w-3" /> CSV Export</Button>
+              <Button variant="ghost" size="sm" className="text-xs gap-1.5"><Globe className="h-3 w-3" /> Share</Button>
+            </div>
+            <p className="text-[10px] text-zinc-600 mt-auto pt-3">Last updated: Jun 16, 2026 &middot; Auto-refreshes daily</p>
+          </div>
         </div>
       </motion.div>
     </section>
@@ -761,39 +1002,97 @@ function AnalyticsPreview() {
 // ─── Client Portal Preview ─────────────────────────────────────────────────
 
 function ClientPortalPreview() {
-  const clientModules = [
-    { icon: FolderKanban, title: "Projects", desc: "View assigned projects with progress tracking" },
-    { icon: FileText, title: "Invoices", desc: "View and pay invoices with status tracking" },
-    { icon: FileSignature, title: "Contracts", desc: "View and sign contracts and proposals" },
-    { icon: Calendar, title: "Meetings", desc: "View upcoming meetings and join calls" },
-    { icon: MessageSquare, title: "Messages", desc: "Chat with your team in real-time" },
-  ];
   return (
     <section id="client-portal" className="scroll-mt-20 mx-auto w-full max-w-6xl px-6 py-16 border-t border-white/5">
       <SectionHeader badge="Client Experience" title="Client Portal" description="Dedicated dashboard for your clients — projects, invoices, contracts, and messages, all role-gated." />
-      <motion.div className="rounded-2xl border border-white/10 bg-white/[0.02] overflow-hidden" initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-60px" }} transition={{ type: "spring", stiffness: 80, damping: 18 }}>
-        <div className="p-5">
-          {/* Client header */}
-          <div className="flex items-center gap-3 mb-5 pb-4 border-b border-white/5">
-            <MockAvatar letter="TC" color="bg-blue-500" />
-            <div><span className="text-sm font-medium">TechCorp Inc</span><p className="text-[11px] text-zinc-500">Client · Joined Jan 2026</p></div>
-          </div>
-          {/* Welcome card */}
-          <div className="rounded-lg bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 p-4 mb-5">
-            <h4 className="text-sm font-semibold">Welcome back, TechCorp!</h4>
-            <p className="text-xs text-zinc-400 mt-1">Your website redesign project is 75% complete. Next milestone: Design Review on June 18th.</p>
-          </div>
-          {/* Module grid */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-            {clientModules.map((m) => (
-              <div key={m.title} className="rounded-lg border border-white/5 bg-white/[0.02] p-3 text-center hover:border-primary/30 transition-colors cursor-pointer">
-                <div className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary mb-2"><m.icon className="h-4 w-4" /></div>
-                <span className="text-xs font-medium block">{m.title}</span>
-                <span className="text-[10px] text-zinc-500 block mt-0.5">{m.desc}</span>
+      <motion.div initial={{ opacity: 0, y: 32 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-60px" }} transition={{ type: "spring", stiffness: 80, damping: 18 }}>
+        <MockBrowserFrame>
+          <div className="flex flex-col sm:flex-row min-h-[380px]">
+            {/* Sidebar */}
+            <div className="sm:w-44 shrink-0 border-b sm:border-b-0 sm:border-r border-white/5 bg-white/[0.01]">
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5">
+                <div className="h-6 w-6"><Logo /></div>
+                <span className="text-xs font-bold truncate">TechCorp</span>
               </div>
-            ))}
+              <nav className="flex sm:flex-col gap-0.5 p-2 overflow-x-auto">
+                {[
+                  { icon: LayoutDashboard, label: "Dashboard", active: true },
+                  { icon: FolderKanban, label: "Projects", active: false },
+                  { icon: FileText, label: "Invoices", active: false },
+                  { icon: MessageSquare, label: "Messages", active: false },
+                ].map((n) => (
+                  <div key={n.label} className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs whitespace-nowrap cursor-pointer transition-colors ${n.active ? "bg-primary/10 text-primary font-medium" : "text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04]"}`}>
+                    <n.icon className="h-3.5 w-3.5 shrink-0" />
+                    <span className="hidden sm:inline">{n.label}</span>
+                  </div>
+                ))}
+              </nav>
+            </div>
+            {/* Main content */}
+            <div className="flex-1 p-3 sm:p-5 min-w-0">
+              {/* Top bar */}
+              <div className="flex items-center justify-between mb-5">
+                <div className="min-w-0">
+                  <h3 className="text-sm font-bold">Dashboard</h3>
+                  <p className="text-[11px] text-zinc-500 truncate">Welcome back, TechCorp!</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="relative">
+                    <Bell className="h-4 w-4 text-zinc-500" />
+                    <div className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-red-500" />
+                  </div>
+                  <div className="h-7 w-7 rounded-full bg-blue-500 flex items-center justify-center text-[10px] font-bold text-white shrink-0">TC</div>
+                </div>
+              </div>
+              {/* Stats row */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+                {[
+                  { label: "Active Projects", value: "2" },
+                  { label: "Open Invoices", value: "1" },
+                  { label: "Upcoming Meetings", value: "3" },
+                  { label: "Unread Messages", value: "4" },
+                ].map((s) => (
+                  <div key={s.label} className="rounded-lg border border-white/5 bg-white/[0.02] p-2.5 text-center">
+                    <span className="text-lg font-bold block text-zinc-100 tabular-nums">{s.value}</span>
+                    <span className="text-[10px] text-zinc-500">{s.label}</span>
+                  </div>
+                ))}
+              </div>
+              {/* Project progress */}
+              <div className="rounded-lg border border-white/5 bg-gradient-to-r from-blue-500/[0.03] to-purple-500/[0.03] p-3 sm:p-4 mb-4">
+                <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
+                  <span className="text-xs font-medium">Website Redesign</span>
+                  <MockBadge className="bg-emerald-500/10 text-emerald-400">75% Complete</MockBadge>
+                </div>
+                <div className="h-1.5 rounded-full bg-zinc-800 mb-1 overflow-hidden">
+                  <div className="h-full w-3/4 rounded-full bg-gradient-to-r from-blue-500 to-purple-500" />
+                </div>
+                <span className="text-[10px] text-zinc-600">Next milestone: Design Review &mdash; Jun 18th</span>
+              </div>
+              {/* Recent invoices */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-medium text-zinc-400">Recent Invoices</span>
+                  <span className="text-[10px] text-primary hover:underline cursor-pointer">View all</span>
+                </div>
+                <div className="space-y-1">
+                  {[
+                    { id: "INV-2026-001", amount: "$16,500", status: "Paid" },
+                    { id: "INV-2026-002", amount: "$2,450", status: "Pending" },
+                  ].map((inv) => (
+                    <div key={inv.id} className="flex items-center justify-between rounded-lg px-3 py-2 hover:bg-white/[0.04] text-xs transition-colors">
+                      <span className="text-zinc-300">{inv.id}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-emerald-400 font-medium">{inv.amount}</span>
+                        <MockBadge className={inv.status === "Paid" ? "bg-emerald-500/10 text-emerald-400" : "bg-amber-500/10 text-amber-400"}>{inv.status}</MockBadge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        </MockBrowserFrame>
       </motion.div>
     </section>
   );
@@ -861,14 +1160,6 @@ function TestimonialsSection() {
   );
 }
 
-// ─── Stats Strip ───────────────────────────────────────────────────────────
-
-const STATS = [
-  { label: "Deploy method", value: "Vercel" },
-  { label: "Setup time", value: "<10 min" },
-  { label: "Free & open source", value: "MIT" },
-];
-
 // ─── Page ──────────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
@@ -886,12 +1177,8 @@ export default function LandingPage() {
   if (!ready) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-black">
-        <div className="flex items-center gap-3">
-          <Logo />
-          <div className="space-y-2">
-            <div className="h-3 w-28 rounded bg-zinc-800 animate-pulse" />
-            <div className="h-3 w-20 rounded bg-zinc-800 animate-pulse" />
-          </div>
+        <div className="flex items-center gap-3 h-12">
+          <Logo animate />
         </div>
       </div>
     );
@@ -913,14 +1200,17 @@ export default function LandingPage() {
             <Logo />
             <span className="text-base font-bold tracking-tight">LeadFlow</span>
           </Link>
-          <nav className="hidden items-center gap-6 text-sm text-zinc-400 md:flex">
+          <nav className="hidden items-center gap-5 text-sm text-zinc-400 md:flex">
             <a href="#dashboard" className="hover:text-white transition-colors">Dashboard</a>
             <a href="#leads" className="hover:text-white transition-colors">Leads</a>
             <a href="#projects" className="hover:text-white transition-colors">Projects</a>
+            <a href="#invoices" className="hover:text-white transition-colors">Invoices</a>
+            <a href="#analytics" className="hover:text-white transition-colors">Analytics</a>
+            <a href="#client-portal" className="hover:text-white transition-colors">Portal</a>
             <a href="#features" className="hover:text-white transition-colors">Features</a>
             <Link href="/docs" className="hover:text-white transition-colors">Docs</Link>
-            <a href="https://github.com/Tabish5858/Leadflow-CRM" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-white transition-colors">
-              <Github className="h-4 w-4" /> GitHub
+            <a href="https://github.com/Tabish5858/Leadflow-CRM" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-white transition-colors">
+              <Github className="h-3.5 w-3.5" /> GitHub
             </a>
           </nav>
           <div className="flex items-center gap-2">
@@ -934,115 +1224,31 @@ export default function LandingPage() {
 
       <main className="relative z-10">
         {/* Hero */}
-        <section className="mx-auto w-full max-w-6xl px-6 pb-20 pt-20 md:pt-28">
-          <motion.div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16" variants={staggerContainer} initial="hidden" animate="visible">
-            {/* Left: text content */}
-            <div className="max-w-xl">
-              <motion.div variants={fadeUp}>
-                <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 py-1.5 text-xs text-zinc-400 mb-8">
-                  <div className="flex items-center gap-1.5">
-                    <span className="flex h-2 w-2 rounded-full bg-emerald-400" />
-                    <span>MIT Licensed</span>
-                  </div>
-                  <span className="text-zinc-600">|</span>
-                  <span>Self-Hosted</span>
-                  <span className="text-zinc-600">|</span>
-                  <span>Free Forever</span>
-                </div>
-              </motion.div>
-              <motion.h1 variants={fadeUpHeavy} className="text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl">
-                Open-source CRM<br />
-                <span className="bg-gradient-to-r from-white via-white to-primary/60 bg-clip-text text-transparent">
-                  built for teams
-                </span>
-                <br />
-                <span className="text-zinc-500">not for spreadsheets</span>
-              </motion.h1>
-              <motion.p variants={fadeUp} className="mt-6 text-base text-zinc-400 sm:text-lg leading-relaxed max-w-lg">
-                LeadFlow replaces your patchwork of spreadsheets, invoicing tools, and chat apps. 
-                Dashboard, leads, projects, invoices, contracts, meetings, messages, time tracking, 
-                analytics, and a client portal — self-hosted, MIT licensed, zero cost.
-              </motion.p>
-              <motion.div variants={fadeUp} className="mt-8 flex flex-wrap gap-3">
-                <Button size="lg" className="gap-2 text-base h-12 px-6 shadow-lg shadow-primary/25" onClick={() => { localStorage.setItem("leadflow_demo_mode", "true"); window.location.href = "/dashboard"; }}>
-                  <Zap className="h-5 w-5" /> Try Demo — No Signup
-                </Button>
-                <Button asChild variant="outline" size="lg" className="gap-2 text-base h-12 px-6 border-white/10">
-                  <a href="https://github.com/Tabish5858/Leadflow-CRM" target="_blank" rel="noopener noreferrer">
-                    <Github className="h-5 w-5" /> Star on GitHub <ExternalLink className="h-3.5 w-3.5 opacity-50" />
-                  </a>
-                </Button>
-              </motion.div>
-              <motion.div variants={fadeUp} className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
-                {[
-                  { value: "8+", label: "Stars" },
-                  { value: "436+", label: "Deployments" },
-                  { value: "3", label: "Contributors" },
-                  { value: "<10 min", label: "Setup" },
-                ].map((m) => (
-                  <div key={m.label} className="flex items-center gap-2">
-                    <span className="text-lg font-bold tabular-nums">{m.value}</span>
-                    <span className="text-xs text-zinc-500">{m.label}</span>
-                  </div>
-                ))}
-              </motion.div>
-            </div>
-
-            {/* Right: product mockup */}
-            <motion.div variants={scaleFade} className="relative hidden lg:block">
-              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/20 via-primary/5 to-transparent blur-2xl" />
-              <div className="relative rounded-2xl border border-white/10 bg-white/[0.02] p-1 shadow-2xl shadow-black/50">
-                {/* Mock browser bar */}
-                <div className="flex items-center gap-1.5 px-3 py-2 border-b border-white/5">
-                  <div className="flex gap-1.5">
-                    <div className="h-2.5 w-2.5 rounded-full bg-red-500/70" />
-                    <div className="h-2.5 w-2.5 rounded-full bg-amber-500/70" />
-                    <div className="h-2.5 w-2.5 rounded-full bg-emerald-500/70" />
-                  </div>
-                  <div className="flex-1 mx-4 h-5 rounded-md bg-white/[0.04] flex items-center px-2">
-                    <span className="text-[10px] text-zinc-600">app.leadflow.dev/dashboard</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-5 w-5 rounded-full bg-zinc-800 flex items-center justify-center"><Bell className="h-2.5 w-2.5 text-zinc-500" /></div>
-                    <div className="h-5 w-5 rounded-full bg-primary/30" />
-                  </div>
-                </div>
-                {/* Mock dashboard grid */}
-                <div className="p-3 grid grid-cols-2 gap-2">
-                  {[
-                    { title: "My Tasks", value: "4 active", stat: "2 overdue", color: "text-blue-400" },
-                    { title: "Projects", value: "3 active", stat: "$52.7k total", color: "text-emerald-400" },
-                    { title: "Invoices", value: "$32.1k", stat: "2 pending", color: "text-amber-400" },
-                    { title: "Messages", value: "4 unread", stat: "3 conversations", color: "text-violet-400" },
-                  ].map((c) => (
-                    <div key={c.title} className="rounded-lg border border-white/5 bg-white/[0.02] p-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-[11px] text-zinc-500">{c.title}</span>
-                        <GripVertical className="h-3 w-3 text-zinc-700" />
-                      </div>
-                      <span className={`text-sm font-bold ${c.color}`}>{c.value}</span>
-                      <div className="h-8 mt-2 rounded bg-zinc-800/50 flex items-end">
-                        <div className={`h-full w-3/4 rounded-l-sm ${c.color.replace("text-", "bg-")} opacity-20`} />
-                      </div>
-                      <span className="text-[10px] text-zinc-600 mt-1 block">{c.stat}</span>
-                    </div>
-                  ))}
-                </div>
+        <section className="mx-auto w-full max-w-5xl px-6 pt-28 pb-20 text-center">
+          <motion.div variants={staggerContainer} initial="hidden" animate="visible">
+            <motion.div variants={fadeUp}>
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 py-1.5 text-xs text-zinc-400 mb-8">
+                <span className="flex h-2 w-2 rounded-full bg-emerald-400 shrink-0" />
+                <span className="truncate">MIT Licensed · Self-Hosted · Free Forever</span>
               </div>
             </motion.div>
-          </motion.div>
-        </section>
-
-        {/* Stats */}
-        <section className="mx-auto w-full max-w-5xl px-6 pb-12">
-          <motion.div className="grid grid-cols-1 gap-4 rounded-2xl border border-white/10 bg-white/[0.02] p-6 sm:grid-cols-3"
-            variants={staggerContainer} initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-40px" }}>
-            {STATS.map((s) => (
-              <motion.div key={s.label} variants={fadeUp} className="text-center">
-                <p className="text-lg font-bold">{s.value}</p>
-                <p className="text-xs text-zinc-400 mt-0.5">{s.label}</p>
-              </motion.div>
-            ))}
+            <motion.h1 variants={fadeUpHeavy} className="text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl mx-auto max-w-2xl">
+              The CRM your team<br />
+              <span className="bg-gradient-to-r from-white via-white to-primary/60 bg-clip-text text-transparent">will actually use</span>
+            </motion.h1>
+            <motion.p variants={fadeUp} className="mt-4 text-base sm:text-lg text-zinc-400 max-w-sm mx-auto">
+              Open-source. Self-hosted. Zero cost.
+            </motion.p>
+            <motion.div variants={fadeUp} className="mt-8 flex flex-wrap justify-center gap-3">
+              <Button size="lg" className="gap-2 text-base h-12 px-8" onClick={() => { localStorage.setItem("leadflow_demo_mode", "true"); window.location.href = "/dashboard"; }}>
+                <Zap className="h-5 w-5" /> Try Demo — No Signup
+              </Button>
+              <Button asChild variant="outline" size="lg" className="gap-2 text-base h-12 px-8 border-white/10">
+                <a href="https://github.com/Tabish5858/Leadflow-CRM" target="_blank" rel="noopener noreferrer">
+                  <Github className="h-5 w-5" /> Star on GitHub <ExternalLink className="h-3.5 w-3.5 opacity-50" />
+                </a>
+              </Button>
+            </motion.div>
           </motion.div>
         </section>
 
