@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { MessageSquare, ArrowUpRight } from "lucide-react";
 import { DashboardCard } from "@/components/dashboard/dashboard-card";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useWorkspace } from "@/contexts/workspace-context";
 import { getConversations } from "@/lib/firebase/messages";
-import type { Conversation } from "@/types";
+import { getWorkspaceMembers } from "@/lib/firebase/workspaces";
+import type { Conversation, WorkspaceMember } from "@/types";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +17,7 @@ export function MessagesCard() {
   const router = useRouter();
   const { activeWorkspace, user } = useWorkspace();
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,8 +29,14 @@ export function MessagesCard() {
       try {
         setLoading(true);
         setError(null);
-        const data = await getConversations(activeWorkspace.id);
-        if (!cancelled) setConversations(data.slice(0, 6));
+        const [data, membersData] = await Promise.all([
+          getConversations(activeWorkspace.id),
+          getWorkspaceMembers(activeWorkspace.id),
+        ]);
+        if (!cancelled) {
+          setConversations(data.slice(0, 6));
+          setMembers(membersData);
+        }
       } catch (err) {
         if (!cancelled) setError("Failed to load conversations");
         console.error(err);
@@ -38,6 +47,9 @@ export function MessagesCard() {
 
     return () => { cancelled = true; };
   }, [activeWorkspace?.id]);
+
+  // Build photo map: userId -> photoURL
+  const photoMap = new Map(members.map((m) => [m.userId, m.photoURL]));
 
   const totalUnread = conversations.reduce((sum, c) => sum + (c.unreadCount ?? 0), 0);
 
@@ -104,6 +116,11 @@ export function MessagesCard() {
             const displayName = resolveName();
             const initials = displayName.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
 
+            // Resolve other user's photo
+            const otherPhoto = user?.id && conv.participantIds?.length
+              ? photoMap.get(conv.participantIds.find((id) => id !== user.id) || "") || null
+              : null;
+
             return (
               <div
                 key={conv.id}
@@ -113,10 +130,12 @@ export function MessagesCard() {
                 )}
                 onClick={() => router.push(`/messages/${conv.id}`)}
               >
-                {/* Avatar with initials */}
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                  {initials}
-                </div>
+                <Avatar className="h-8 w-8 shrink-0">
+                  <AvatarImage src={otherPhoto || undefined} />
+                  <AvatarFallback className="text-xs bg-primary/10 text-primary font-semibold">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">

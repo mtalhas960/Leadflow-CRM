@@ -1,6 +1,6 @@
 "use client";
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -86,6 +86,7 @@ export function WorkspaceSwitcher({ collapsed = false }: { collapsed?: boolean }
                 title={activeWorkspace.name}
               >
                 <Avatar className="h-8 w-8 border bg-primary/10">
+                  <AvatarImage src={activeWorkspace.logoUrl || undefined} />
                   <AvatarFallback className="text-xs bg-primary/10 text-primary">
                     {getWorkspaceInitials(activeWorkspace.name)}
                   </AvatarFallback>
@@ -97,6 +98,7 @@ export function WorkspaceSwitcher({ collapsed = false }: { collapsed?: boolean }
                 className="w-full justify-start gap-2 px-2 h-10 text-sm font-medium hover:bg-accent/50 group"
               >
                 <Avatar className="h-6 w-6 border bg-primary/10">
+                  <AvatarImage src={activeWorkspace.logoUrl || undefined} />
                   <AvatarFallback className="text-xs bg-primary/10 text-primary">
                     {getWorkspaceInitials(activeWorkspace.name)}
                   </AvatarFallback>
@@ -125,6 +127,7 @@ export function WorkspaceSwitcher({ collapsed = false }: { collapsed?: boolean }
                 className="gap-2 cursor-pointer"
               >
                 <Avatar className="h-6 w-6 border bg-primary/10">
+                  <AvatarImage src={workspace.logoUrl || undefined} />
                   <AvatarFallback className="text-xs bg-primary/10 text-primary">
                     {getWorkspaceInitials(workspace.name)}
                   </AvatarFallback>

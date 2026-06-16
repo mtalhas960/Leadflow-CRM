@@ -207,21 +207,13 @@ function DashboardLayoutInner({ children }: { children: React.ReactNode }) {
             sidebarCollapsed ? "lg:w-20" : "lg:w-64"
           )}
         >
-          {/* ── Logo + Collapse Toggle ── */}
+          {/* ── Collapse Toggle + Mobile Close ── */}
           <div
             className={cn(
-              "flex h-16 shrink-0 items-center border-b px-4",
-              sidebarCollapsed ? "justify-center" : "justify-between"
+              "flex h-10 shrink-0 items-center px-3",
+              sidebarCollapsed ? "justify-center" : "justify-end"
             )}
           >
-            <div className="flex items-center gap-3 min-w-0">
-              <Avatar className="h-8 w-8 shrink-0 rounded-lg">
-                <AvatarImage src={activeWorkspace?.logoUrl || undefined} />
-                <AvatarFallback className="rounded-lg bg-gradient-to-br from-primary to-primary/70 text-primary-foreground font-bold text-sm">
-                  {(activeWorkspace?.name || "LF").slice(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-            </div>
             {!sidebarCollapsed && (
               <button
                 type="button"

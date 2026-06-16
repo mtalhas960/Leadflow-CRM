@@ -1,9 +1,11 @@
 "use client";
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { db } from "@/lib/firebase/client";
+import { getWorkspaceMembers } from "@/lib/firebase/workspaces";
+import type { WorkspaceMember } from "@/types";
 import { collection, getDocs, limit, orderBy, query, Timestamp, where } from "firebase/firestore";
 import { MessageSquare, ArrowRight } from "lucide-react";
 import Link from "next/link";
@@ -30,6 +32,7 @@ interface MessagesWidgetProps {
 
 export function MessagesWidget({ workspaceId, userId }: MessagesWidgetProps) {
   const [conversations, setConversations] = useState<ClientConversation[]>([]);
+  const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -70,16 +73,19 @@ export function MessagesWidget({ workspaceId, userId }: MessagesWidgetProps) {
           return;
         }
 
-        const convRef = collection(db, "conversations");
-        const q = query(
-          convRef,
-          where("workspaceId", "==", workspaceId),
-          orderBy("lastMessageAt", "desc"),
-          limit(10)
-        );
-        const snap = await getDocs(q);
+        const [convSnap, membersData] = await Promise.all([
+          getDocs(
+            query(
+              collection(db, "conversations"),
+              where("workspaceId", "==", workspaceId),
+              orderBy("lastMessageAt", "desc"),
+              limit(10)
+            )
+          ),
+          getWorkspaceMembers(workspaceId),
+        ]);
 
-        const filtered = snap.docs
+        const filtered = convSnap.docs
           .map((d) => {
             const data = d.data();
             return {
@@ -95,6 +101,7 @@ export function MessagesWidget({ workspaceId, userId }: MessagesWidgetProps) {
           .slice(0, 3);
 
         setConversations(filtered);
+        setMembers(membersData);
       } catch {
         setConversations([]);
       } finally {
@@ -102,6 +109,9 @@ export function MessagesWidget({ workspaceId, userId }: MessagesWidgetProps) {
       }
     })();
   }, [workspaceId, userId]);
+
+  // Build photo map
+  const photoMap = new Map(members.map((m) => [m.userId, m.photoURL]));
 
   if (loading) {
     return (
@@ -176,11 +186,14 @@ export function MessagesWidget({ workspaceId, userId }: MessagesWidgetProps) {
       <CardContent>
         <div className="space-y-3">
           {conversations.map((conv) => {
+            const otherIdx = conv.participantIds.findIndex((id) => id !== userId);
+            const otherId = otherIdx >= 0 ? conv.participantIds[otherIdx] : null;
             const otherNames = conv.participantNames.filter(
               (_, i) => conv.participantIds[i] !== userId
             );
             const displayName = otherNames.join(", ") || "Team";
-            const initial = displayName.charAt(0).toUpperCase();
+            const initials = displayName.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
+            const otherPhoto = otherId ? photoMap.get(otherId) || null : null;
 
             return (
               <Link
@@ -189,8 +202,9 @@ export function MessagesWidget({ workspaceId, userId }: MessagesWidgetProps) {
                 className="flex items-start gap-3 rounded-lg p-2 transition-colors hover:bg-muted/30"
               >
                 <Avatar className="h-9 w-9 border">
+                  <AvatarImage src={otherPhoto || undefined} />
                   <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                    {initial}
+                    {initials}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
