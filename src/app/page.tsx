@@ -26,6 +26,12 @@ import {
   Star,
   Users,
   Zap,
+  Mail,
+  Database,
+  Lock,
+  Palette,
+  Smartphone,
+  Cloud,
 } from "lucide-react";
 import { AnimatePresence, motion, type Variants } from "framer-motion";
 import Link from "next/link";
@@ -39,18 +45,28 @@ interface ModuleItem {
   icon: typeof LayoutDashboard;
   title: string;
   description: string;
+  color: string;
 }
 
 const MODULES: ModuleItem[] = [
-  { icon: LayoutDashboard, title: "Dashboard", description: "Real-time overview of your workspace activity at a glance." },
-  { icon: Users, title: "Leads", description: "Capture, qualify, and nurture leads with spreadsheet-powered data and custom fields." },
-  { icon: FolderKanban, title: "Projects", description: "Manage client projects with progress tracking, budgets, priorities, and deadlines." },
-  { icon: FileText, title: "Invoices", description: "Create, send, and track invoices with line items, tax, and status workflows." },
-  { icon: MessageSquare, title: "Messages", description: "Team inbox for lead and member conversations with read receipts and search." },
-  { icon: Calendar, title: "Meetings", description: "Schedule, join, and manage meetings with client attendance and calendar sync." },
-  { icon: Clock, title: "Time Tracking", description: "Track billable hours per lead and project with start/stop and manual entry." },
-  { icon: BarChart3, title: "Analytics", description: "Revenue, conversion rates, time reports, and exportable reports." },
-  { icon: FileSignature, title: "Contracts", description: "Create proposals, contracts, and agreements with e-signature workflows." },
+  { icon: LayoutDashboard, title: "Dashboard", description: "Real-time overview of your workspace activity at a glance.", color: "from-blue-500 to-cyan-500" },
+  { icon: Users, title: "Leads", description: "Capture, qualify, and nurture leads with spreadsheet-powered data.", color: "from-purple-500 to-pink-500" },
+  { icon: FolderKanban, title: "Projects", description: "Manage client projects with progress tracking, budgets, and deadlines.", color: "from-emerald-500 to-teal-500" },
+  { icon: FileText, title: "Invoices", description: "Create, send, and track invoices with line items, tax, and status workflows.", color: "from-amber-500 to-orange-500" },
+  { icon: MessageSquare, title: "Messages", description: "Team inbox for lead and member conversations with read receipts.", color: "from-indigo-500 to-purple-500" },
+  { icon: Calendar, title: "Meetings", description: "Schedule, join, and manage meetings with client attendance and calendar sync.", color: "from-rose-500 to-pink-500" },
+  { icon: Clock, title: "Time Tracking", description: "Track billable hours per lead and project with start/stop and manual entry.", color: "from-cyan-500 to-blue-500" },
+  { icon: BarChart3, title: "Analytics", description: "Revenue, conversion rates, time reports, and exportable reports.", color: "from-violet-500 to-purple-500" },
+  { icon: FileSignature, title: "Contracts", description: "Create proposals, contracts, and agreements with e-signature workflows.", color: "from-orange-500 to-red-500" },
+];
+
+const FEATURES = [
+  { icon: Globe, title: "Self-hosted", desc: "Your server, your data. Deploy on any Node.js host or Vercel." },
+  { icon: Lock, title: "Role-based access", desc: "Owner, admin, member, viewer, client - each with granular permissions." },
+  { icon: ShieldCheck, title: "Audit trail", desc: "Every mutation logged. Know who did what and when." },
+  { icon: Users, title: "Client portal", desc: "Clients see projects, invoices, and documents in a dedicated dashboard." },
+  { icon: Palette, title: "Custom themes", desc: "18 accent colors, dark/light mode, fully customizable UI." },
+  { icon: Cloud, title: "Free tier ready", desc: "Run on Firebase Spark, Vercel Hobby, Cloudinary Free. Zero cost." },
 ];
 
 const STATS = [
@@ -196,7 +212,7 @@ const FAQ_ITEMS: FAQItem[] = [
   },
 ];
 
-// ─── FAQ Accordion Component ────────────────────────────────────────────────
+// ─── FAQ Accordion Component ───────────────────────────────────────────────
 
 function FAQAccordion() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
@@ -298,7 +314,7 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen overflow-x-hidden">
+    <div className="min-h-screen overflow-x-hidden bg-black">
       {/* ── Background Effects ── */}
       <div className="pointer-events-none fixed inset-0">
         <div className="absolute -top-32 right-[-10%] h-96 w-96 rounded-full bg-primary/10 blur-3xl" />
@@ -312,7 +328,7 @@ export default function LandingPage() {
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ type: "spring", stiffness: 120, damping: 20 }}
-        className="sticky top-0 z-20 border-b border-border/40 bg-background/80 backdrop-blur-xl"
+        className="sticky top-0 z-20 border-b border-border/40 bg-black/80 backdrop-blur-xl"
       >
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-3.5">
           <Link href="/" className="flex items-center gap-1">
@@ -323,7 +339,7 @@ export default function LandingPage() {
           </Link>
           <nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex" aria-label="Primary">
             <a className="hover:text-foreground transition-colors" href="#modules">Modules</a>
-            <a className="hover:text-foreground transition-colors" href="#open-source">Open Source</a>
+            <a className="hover:text-foreground transition-colors" href="#features">Features</a>
             <a className="hover:text-foreground transition-colors" href="#testimonials">Testimonials</a>
             <Link className="hover:text-foreground transition-colors" href="/docs">Docs</Link>
             <a
@@ -457,11 +473,55 @@ export default function LandingPage() {
           </motion.div>
         </section>
 
-        {/* ── Bento Modules Grid ── */}
-        <BentoSection />
+        {/* ── Modules Grid ── */}
+        <section id="modules" className="scroll-mt-20 mx-auto w-full max-w-6xl px-6 py-16">
+          <motion.div
+            className="text-center mb-12"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-40px" }}
+            transition={{ type: "spring", stiffness: 100, damping: 20 }}
+          >
+            <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-background/60 px-3.5 py-1 text-xs text-muted-foreground mb-4">
+              <KanbanSquare className="h-3.5 w-3.5 text-primary" />
+              All-in-one platform
+            </div>
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              Every module you need
+            </h2>
+            <p className="mt-3 text-muted-foreground max-w-xl mx-auto">
+              From leads to invoices, meetings to contracts — everything in one place.
+            </p>
+          </motion.div>
+          <motion.div
+            className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-40px" }}
+          >
+            {MODULES.map((m) => (
+              <motion.div
+                key={m.title}
+                variants={fadeUp}
+                className="group relative rounded-xl border border-border/40 bg-background/40 p-6 transition-all duration-300 hover:border-primary/50"
+                whileHover={{
+                  y: -6,
+                  transition: { type: "spring", stiffness: 200, damping: 15 },
+                }}
+              >
+                <div className={`inline-flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br ${m.color} text-white shadow-lg`}>
+                  <m.icon className="h-5 w-5" />
+                </div>
+                <h3 className="mt-4 font-semibold text-base">{m.title}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">{m.description}</p>
+              </motion.div>
+            ))}
+          </motion.div>
+        </section>
 
-        {/* ── Open Source ── */}
-        <section id="open-source" className="scroll-mt-20 border-t border-border/40 bg-background/50">
+        {/* ── Features ── */}
+        <section id="features" className="scroll-mt-20 border-t border-border/40 bg-background/50">
           <div className="mx-auto w-full max-w-6xl px-6 py-16">
             <div className="grid items-center gap-10 lg:grid-cols-2">
               <motion.div
@@ -519,12 +579,7 @@ export default function LandingPage() {
                 whileInView="visible"
                 viewport={{ once: true, margin: "-60px" }}
               >
-                {[
-                  { icon: Globe, title: "Self-hosted", desc: "Your server, your data. Deploy on any Node.js host." },
-                  { icon: Users, title: "Role-based access", desc: "Owner, admin, member, viewer, client - each with granular permissions." },
-                  { icon: ShieldCheck, title: "Audit trail", desc: "Every mutation logged. Know who did what and when." },
-                  { icon: FileText, title: "Client portal", desc: "Clients see projects, invoices, and documents in a dedicated dashboard." },
-                ].map((f) => (
+                {FEATURES.map((f) => (
                   <motion.div key={f.title} variants={fadeUp} className="rounded-xl border border-border/40 bg-background/40 p-4">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
                       <f.icon className="h-4 w-4" />
@@ -634,7 +689,7 @@ export default function LandingPage() {
           </motion.div>
         </section>
 
-        {/* ── FAQ ── */}
+        {/* ─ FAQ ── */}
         <section
           id="faq"
           className="scroll-mt-20 mx-auto w-full max-w-4xl px-6 pb-16"
@@ -725,7 +780,7 @@ export default function LandingPage() {
         </section>
       </main>
 
-      {/* ── Footer ── */}
+      {/* ── Footer ─ */}
       <motion.footer
         className="border-t border-border/40"
         initial={{ opacity: 0 }}
