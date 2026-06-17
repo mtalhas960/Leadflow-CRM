@@ -5,6 +5,7 @@ import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { getProjects } from "@/lib/firebase/projects";
 import { getProjectTasks } from "@/lib/firebase/project-tasks";
+import type { ProjectTask } from "@/types";
 import { getInvoices } from "@/lib/firebase/invoices";
 import { getContracts } from "@/lib/firebase/contracts";
 import { getMeetings } from "@/lib/firebase/meetings";
@@ -43,7 +44,7 @@ export function useDashboardTasks(workspaceId?: string, userId?: string) {
           where("isDeleted", "==", false)
         );
         const snap = await getDocs(q);
-        allTasks.push(...snap.docs.map((d) => ({ id: d.id, ...d.data() } as any)));
+        allTasks.push(...snap.docs.map((d) => ({ id: d.id, ...d.data() } as ProjectTask)));
       } else {
         for (let i = 0; i < projectIds.length; i += 10) {
           const chunk = projectIds.slice(i, i + 10);
@@ -53,7 +54,7 @@ export function useDashboardTasks(workspaceId?: string, userId?: string) {
             where("isDeleted", "==", false)
           );
           const snap = await getDocs(q);
-          allTasks.push(...snap.docs.map((d) => ({ id: d.id, ...d.data() } as any)));
+          allTasks.push(...snap.docs.map((d) => ({ id: d.id, ...d.data() } as ProjectTask)));
         }
       }
 

@@ -37,16 +37,6 @@ export interface ToastOptions {
 
 // ─── Helpers ────────────────────────────────────────────────────────
 
-function normalize(options: string | ToastOptions): {
-  title: string;
-  opts: ToastOptions;
-} {
-  if (typeof options === "string") {
-    return { title: options, opts: {} };
-  }
-  return { title: options.description || "", opts: options };
-}
-
 // ─── Public API ─────────────────────────────────────────────────────
 
 export const toast = {

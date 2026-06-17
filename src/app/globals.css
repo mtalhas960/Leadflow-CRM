@@ -83,25 +83,25 @@
    SHADCN SEMANTIC TOKENS (HSL)
    ============================================ */
 :root {
-  /* Dark theme (default) - professional CRM palette */
-  --background: 0 0% 20%;
+  /* Dark theme (default) - very dark gray professional palette */
+  --background: 0 0% 5%;
   --foreground: 210 40% 98%;
-  --card: 0 0% 24%;
+  --card: 0 0% 9%;
   --card-foreground: 210 40% 98%;
-  --popover: 0 0% 24%;
+  --popover: 0 0% 9%;
   --popover-foreground: 210 40% 98%;
   --primary: 215 16% 47%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 0 0% 28%;
+  --secondary: 0 0% 13%;
   --secondary-foreground: 210 40% 98%;
-  --muted: 0 0% 28%;
+  --muted: 0 0% 13%;
   --muted-foreground: 215 16% 60%;
-  --accent: 0 0% 28%;
+  --accent: 0 0% 13%;
   --accent-foreground: 210 40% 98%;
   --destructive: 0 63% 45%;
   --destructive-foreground: 0 0% 100%;
-  --border: 0 0% 32%;
-  --input: 0 0% 32%;
+  --border: 0 0% 17%;
+  --input: 0 0% 17%;
   --ring: 215 16% 47%;
 
   --chart-1: 215 16% 47%;
@@ -170,24 +170,24 @@
    ============================================ */
 .docs-dark {
   color-scheme: dark;
-  --background: 0 0% 20%;
+  --background: 0 0% 5%;
   --foreground: 210 40% 98%;
-  --card: 0 0% 24%;
+  --card: 0 0% 9%;
   --card-foreground: 210 40% 98%;
-  --popover: 0 0% 24%;
+  --popover: 0 0% 9%;
   --popover-foreground: 210 40% 98%;
   --primary: 215 16% 47%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 220 13% 10%;
+  --secondary: 220 13% 4%;
   --secondary-foreground: 210 40% 98%;
-  --muted: 220 13% 10%;
+  --muted: 220 13% 4%;
   --muted-foreground: 215 16% 65%;
-  --accent: 220 13% 12%;
+  --accent: 220 13% 6%;
   --accent-foreground: 210 40% 98%;
   --destructive: 0 63% 45%;
   --destructive-foreground: 0 0% 100%;
-  --border: 220 13% 16%;
-  --input: 220 13% 16%;
+  --border: 220 13% 8%;
+  --input: 220 13% 8%;
   --ring: 215 16% 47%;
 }
 
