@@ -22,6 +22,9 @@ import {
 import { canCreateWorkspace } from "@/lib/workspace-permissions";
 import { useDemoMode } from "@/lib/demo/demo-context";
 import { DEMO_USER, DEMO_WORKSPACE } from "@/lib/demo/demo-data";
+import { cacheGet, cacheSet, cacheRemove } from "@/lib/cache/local-cache";
+
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 min — workspace membership rarely changes
 
 // Synchronous check - doesn't depend on React state propagation
 function isDemoModeSync(): boolean {
@@ -98,60 +101,83 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       }
 
       try {
-        // Load user document
-        const userRef = doc(db, "users", firebaseUser.uid);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          const rawUserData = userSnap.data() as User;
-          // Always set id from Firestore doc ID (legacy accounts may not store it)
-          if (!rawUserData.id) rawUserData.id = firebaseUser.uid;
+        const uid = firebaseUser.uid;
+        const userRef = doc(db, "users", uid);
 
-          // Determine active workspace
-          let targetWorkspaceId = rawUserData.activeWorkspaceId;
+        // 1. User doc — try cache first (stale-while-revalidate)
+        const cachedUser = cacheGet<User>(`user_${uid}`, CACHE_TTL_MS);
+        if (cachedUser && !cachedUser.id) cachedUser.id = uid;
 
-          // Fallback to localStorage
-          if (!targetWorkspaceId) {
-            const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-            if (stored) targetWorkspaceId = stored;
-          }
+        // 2. Workspaces — try cache first
+        let fetchedWorkspaces = cacheGet<Workspace[]>(`workspaces_${uid}`, CACHE_TTL_MS);
 
-          // Load workspaces
-          const fetchedWorkspaces = await getUserWorkspaces([firebaseUser.uid]);
-          setWorkspaces(fetchedWorkspaces);
+        // Fetch fresh data in parallel (non-blocking if cache hit)
+        const [freshUserSnap, freshWorkspaces] = await Promise.all([
+          getDoc(userRef).catch(() => null),
+          fetchedWorkspaces
+            ? Promise.resolve(fetchedWorkspaces)
+            : getUserWorkspaces([uid]),
+        ]);
 
-          // Resolve the active workspace
-          let resolvedWorkspace: Workspace | null = null;
-          if (targetWorkspaceId && fetchedWorkspaces.find((w) => w.id === targetWorkspaceId)) {
-            resolvedWorkspace = fetchedWorkspaces.find((w) => w.id === targetWorkspaceId) || null;
-          } else if (fetchedWorkspaces.length > 0) {
-            // Default to first workspace
-            resolvedWorkspace = fetchedWorkspaces[0];
-            // Sync to Firestore
-            await updateDoc(userRef, { activeWorkspaceId: fetchedWorkspaces[0].id });
-          }
-
-          // Compute effective role for this workspace
-          if (resolvedWorkspace) {
-            rawUserData.role = getEffectiveRole(rawUserData, resolvedWorkspace.id);
-          }
-          setUser(rawUserData);
-          setActiveWorkspaceState(resolvedWorkspace);
-
-          // Set up real-time subscription
-          if (unsubscribeWsRef.current) unsubscribeWsRef.current();
-          const unsub = subscribeToUserWorkspaces(firebaseUser.uid, (updatedWorkspaces) => {
-            setWorkspaces(updatedWorkspaces);
-            // Update active workspace if it changed
-            setActiveWorkspaceState((prev) => {
-              if (prev) {
-                const updated = updatedWorkspaces.find((w) => w.id === prev.id);
-                return updated || prev;
-              }
-              return updatedWorkspaces.length > 0 ? updatedWorkspaces[0] : null;
-            });
-          });
-          unsubscribeWsRef.current = unsub;
+        // Use fresh user data if available, fallback to cache
+        let userData: User;
+        if (freshUserSnap?.exists()) {
+          userData = freshUserSnap.data() as User;
+          if (!userData.id) userData.id = uid;
+          cacheSet(`user_${uid}`, userData);
+        } else if (cachedUser) {
+          userData = cachedUser;
+        } else {
+          setLoading(false);
+          return;
         }
+
+        // Cache workspaces if freshly fetched
+        if (!fetchedWorkspaces) {
+          fetchedWorkspaces = freshWorkspaces;
+          cacheSet(`workspaces_${uid}`, fetchedWorkspaces);
+        }
+        setWorkspaces(fetchedWorkspaces);
+
+        // Determine active workspace
+        let targetWorkspaceId = userData.activeWorkspaceId;
+        if (!targetWorkspaceId) {
+          const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+          if (stored) targetWorkspaceId = stored;
+        }
+
+        // Resolve the active workspace
+        let resolvedWorkspace: Workspace | null = null;
+        if (targetWorkspaceId && fetchedWorkspaces.find((w) => w.id === targetWorkspaceId)) {
+          resolvedWorkspace = fetchedWorkspaces.find((w) => w.id === targetWorkspaceId) || null;
+        } else if (fetchedWorkspaces.length > 0) {
+          // Default to first workspace
+          resolvedWorkspace = fetchedWorkspaces[0];
+          // Sync to Firestore
+          await updateDoc(userRef, { activeWorkspaceId: fetchedWorkspaces[0].id });
+        }
+
+        // Compute effective role for this workspace
+        if (resolvedWorkspace) {
+          userData.role = getEffectiveRole(userData, resolvedWorkspace.id);
+        }
+        setUser(userData);
+        setActiveWorkspaceState(resolvedWorkspace);
+
+        // Set up real-time subscription
+        if (unsubscribeWsRef.current) unsubscribeWsRef.current();
+        const unsub = subscribeToUserWorkspaces(firebaseUser.uid, (updatedWorkspaces) => {
+          setWorkspaces(updatedWorkspaces);
+          // Update active workspace if it changed
+          setActiveWorkspaceState((prev) => {
+            if (prev) {
+              const updated = updatedWorkspaces.find((w) => w.id === prev.id);
+              return updated || prev;
+            }
+            return updatedWorkspaces.length > 0 ? updatedWorkspaces[0] : null;
+          });
+        });
+        unsubscribeWsRef.current = unsub;
       } catch (error) {
         console.error("Failed to load workspace data:", error);
       } finally {
