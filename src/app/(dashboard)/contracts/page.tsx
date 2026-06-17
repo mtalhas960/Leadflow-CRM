@@ -1,7 +1,8 @@
 "use client";
 
 import { useWorkspace } from "@/contexts/workspace-context";
-import { getContracts, deleteContract, getTemplates, deleteTemplate } from "@/lib/firebase/contracts";
+import { useContractsQuery } from "@/lib/queries/page-queries";
+import { deleteContract, getTemplates, deleteTemplate } from "@/lib/firebase/contracts";
 import type { Contract, ContractTemplate, ContractStatus, ContractType } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -87,16 +88,19 @@ export default function ContractsPage() {
   const [activeTab, setActiveTab] = useState<TabType>(
     (searchParams?.get("tab") as TabType) || "Contracts"
   );
-  const [contracts, setContracts] = useState<Contract[]>([]);
+  const { data: contracts = [], isLoading: contractsLoading, error: contractsError, refetch: refetchContracts } = useContractsQuery(activeWorkspace?.id);
   const [templates, setTemplates] = useState<ContractTemplate[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [templatesError, setTemplatesError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteType, setDeleteType] = useState<"contract" | "template">("contract");
   const [clientMap, setClientMap] = useState<Map<string, { name: string; email: string }>>(new Map());
+
+  const loading = activeTab === "Contracts" ? contractsLoading : templatesLoading;
+  const errorMsg = activeTab === "Contracts" ? (contractsError?.message ?? null) : templatesError;
 
   // Build a lookup map of client IDs → { name, email }
   const loadClients = useCallback(async () => {
@@ -132,45 +136,28 @@ export default function ContractsPage() {
     }
   }, [activeWorkspace?.id]);
 
-  const loadContracts = useCallback(async () => {
-    if (!activeWorkspace?.id) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await getContracts(activeWorkspace.id, { max: 200 });
-      setContracts(data);
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Unknown error";
-      setError(msg);
-      toast.error("Failed to load contracts: " + msg);
-    } finally {
-      setLoading(false);
-    }
-  }, [activeWorkspace?.id]);
-
   // Load clients once on mount
   useEffect(() => { loadClients(); }, [loadClients]);
 
   const loadTemplates = useCallback(async () => {
     if (!activeWorkspace?.id) return;
-    setLoading(true);
-    setError(null);
+    setTemplatesLoading(true);
+    setTemplatesError(null);
     try {
       const data = await getTemplates(activeWorkspace.id);
       setTemplates(data);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Unknown error";
-      setError(msg);
+      setTemplatesError(msg);
       toast.error("Failed to load templates: " + msg);
     } finally {
-      setLoading(false);
+      setTemplatesLoading(false);
     }
   }, [activeWorkspace?.id]);
 
   useEffect(() => {
-    if (activeTab === "Contracts") loadContracts();
-    else loadTemplates();
-  }, [activeTab, loadContracts, loadTemplates]);
+    if (activeTab === "Templates") loadTemplates();
+  }, [activeTab, loadTemplates]);
 
   const filteredContracts = useMemo(() => {
     let list = contracts;
@@ -199,7 +186,7 @@ export default function ContractsPage() {
     try {
       if (deleteType === "contract") {
         await deleteContract(deleteId);
-        setContracts((prev) => prev.filter((c) => c.id !== deleteId));
+        refetchContracts();
         toast.success("Contract deleted");
       } else {
         await deleteTemplate(deleteId);
@@ -286,15 +273,15 @@ export default function ContractsPage() {
       )}
 
       {/* Error state */}
-      {error && !loading && (
+      {errorMsg && !loading && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <div className="text-destructive mb-4">
               <FileText className="h-12 w-12 mx-auto opacity-50" />
             </div>
             <h3 className="text-lg font-semibold">Failed to load</h3>
-            <p className="text-sm text-muted-foreground mt-1 mb-4 max-w-md">{error}</p>
-            <Button variant="outline" size="sm" onClick={() => activeTab === "Contracts" ? loadContracts() : loadTemplates()}>
+            <p className="text-sm text-muted-foreground mt-1 mb-4 max-w-md">{errorMsg}</p>
+            <Button variant="outline" size="sm" onClick={() => activeTab === "Contracts" ? refetchContracts() : loadTemplates()}>
               <RefreshCw className="h-4 w-4 mr-2" />
               Retry
             </Button>
@@ -309,7 +296,7 @@ export default function ContractsPage() {
             <Skeleton key={i} className="h-16 w-full rounded-lg" />
           ))}
         </div>
-      ) : !error && activeTab === "Contracts" ? (
+      ) : !errorMsg && activeTab === "Contracts" ? (
         filteredContracts.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12 text-center">
@@ -396,7 +383,7 @@ export default function ContractsPage() {
             ))}
           </div>
         )
-      ) : !error && (
+      ) : !errorMsg && (
         // Templates tab
         filteredTemplates.length === 0 ? (
           <Card>

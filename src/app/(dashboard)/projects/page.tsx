@@ -1,9 +1,9 @@
 "use client";
 
 import { useWorkspace } from "@/contexts/workspace-context";
-import { getProjects } from "@/lib/firebase/projects";
 import { getWorkspaceMembers } from "@/lib/firebase/workspaces";
-import type { Project, WorkspaceMember } from "@/types";
+import { useProjectsQuery } from "@/lib/queries/page-queries";
+import type { WorkspaceMember } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -28,7 +28,7 @@ import {
   Users,
 } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 // ─── Status Config ────────────────────────────────────────────────────────────
 
@@ -68,10 +68,13 @@ function formatDate(date: Date | null): string {
 
 export default function ProjectsPage() {
   const { activeWorkspace } = useWorkspace();
-  const [projects, setProjects] = useState<Project[]>([]);
+  const {
+    data: projects = [],
+    isLoading,
+    error,
+    refetch,
+  } = useProjectsQuery(activeWorkspace?.id);
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"grid" | "board">(() => {
@@ -81,27 +84,11 @@ export default function ProjectsPage() {
     return "grid";
   });
 
-  const loadProjects = useCallback(async () => {
-    if (!activeWorkspace?.id) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const [data, memberData] = await Promise.all([
-        getProjects(activeWorkspace.id),
-        getWorkspaceMembers(activeWorkspace.id),
-      ]);
-      setProjects(data);
-      setMembers(memberData);
-    } catch {
-      setError("Failed to load projects");
-    } finally {
-      setLoading(false);
-    }
-  }, [activeWorkspace?.id]);
-
+  // Fetch workspace members (separate from project query — members change independently)
   useEffect(() => {
-    loadProjects();
-  }, [loadProjects]);
+    if (!activeWorkspace?.id) return;
+    getWorkspaceMembers(activeWorkspace.id).then(setMembers).catch(() => {});
+  }, [activeWorkspace?.id]);
 
   const memberMap = useMemo(
     () => new Map(members.map((m) => [m.userId, m.displayName])),
@@ -138,7 +125,7 @@ export default function ProjectsPage() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Projects</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              {loading ? "Loading..." : `${projects.length} project${projects.length !== 1 ? "s" : ""}`}
+              {isLoading ? "Loading..." : `${projects.length} project${projects.length !== 1 ? "s" : ""}`}
             </p>
           </div>
           <Button asChild>
@@ -196,7 +183,7 @@ export default function ProjectsPage() {
         </div>
 
         {/* Content */}
-        {loading ? (
+        {isLoading ? (
           viewMode === "grid" ? (
             <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 6 }).map((_, i) => (
@@ -234,8 +221,13 @@ export default function ProjectsPage() {
         ) : error ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-              <p className="text-sm font-medium text-destructive">{error}</p>
-              <Button variant="outline" size="sm" className="mt-4" onClick={loadProjects}>
+              <p className="text-sm font-medium text-destructive">{error.message}</p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-4"
+                onClick={() => window.location.reload()}
+              >
                 Retry
               </Button>
             </CardContent>
@@ -244,7 +236,7 @@ export default function ProjectsPage() {
           <ProjectKanbanBoard
             projects={projects}
             statusFilter={statusFilter}
-            onRefresh={loadProjects}
+            onRefresh={refetch}
           />
         ) : filtered.length === 0 ? (
           <Card>

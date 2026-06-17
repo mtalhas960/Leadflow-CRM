@@ -1,7 +1,8 @@
 "use client";
 
 import { useWorkspace } from "@/contexts/workspace-context";
-import { getInvoices, updateInvoice } from "@/lib/firebase/invoices";
+import { useInvoicesQuery } from "@/lib/queries/page-queries";
+import { updateInvoice } from "@/lib/firebase/invoices";
 import { getWorkspaceMembers } from "@/lib/firebase/workspaces";
 import type { Invoice, WorkspaceMember } from "@/types";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -22,7 +23,7 @@ import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { FileText, Loader2, Plus, Search } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 // ─── Status Config ────────────────────────────────────────────────────────────
 
@@ -53,34 +54,15 @@ function formatDate(date: Date): string {
 
 export default function InvoicesPage() {
   const { activeWorkspace, user } = useWorkspace();
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const { data: invoices = [], isLoading, error, refetch } = useInvoicesQuery(activeWorkspace?.id);
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
-  const loadInvoices = useCallback(async () => {
-    if (!activeWorkspace?.id) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const [data, memberData] = await Promise.all([
-        getInvoices(activeWorkspace.id),
-        getWorkspaceMembers(activeWorkspace.id),
-      ]);
-      setInvoices(data);
-      setMembers(memberData);
-    } catch {
-      setError("Failed to load invoices");
-    } finally {
-      setLoading(false);
-    }
-  }, [activeWorkspace?.id]);
-
   useEffect(() => {
-    loadInvoices();
-  }, [loadInvoices]);
+    if (!activeWorkspace?.id) return;
+    getWorkspaceMembers(activeWorkspace.id).then(setMembers).catch(() => {});
+  }, [activeWorkspace?.id]);
 
   const clientMap = useMemo(
     () => new Map(members.filter((m) => m.role === "client").map((m) => [m.userId, m])),
@@ -120,14 +102,8 @@ export default function InvoicesPage() {
   const handleMarkPaid = async (invoice: Invoice) => {
     try {
       await updateInvoice(invoice.id, { status: "paid" });
-      setInvoices((prev) =>
-        prev.map((inv) =>
-          inv.id === invoice.id
-            ? { ...inv, status: "paid" as const, paidDate: { toDate: () => new Date() } as Invoice["paidDate"] }
-            : inv
-        )
-      );
       toast.success(`Invoice ${invoice.invoiceNumber} marked as paid`);
+      refetch();
     } catch {
       toast.error("Failed to update invoice");
     }
@@ -141,7 +117,7 @@ export default function InvoicesPage() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Invoices</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              {loading ? "Loading..." : `${invoices.length} invoice${invoices.length !== 1 ? "s" : ""}`}
+              {isLoading ? "Loading..." : `${invoices.length} invoice${invoices.length !== 1 ? "s" : ""}`}
             </p>
           </div>
           <Button asChild>
@@ -153,7 +129,7 @@ export default function InvoicesPage() {
         </div>
 
         {/* Stats */}
-        {!loading && invoices.length > 0 && (
+        {!isLoading && invoices.length > 0 && (
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
             <Card>
               <CardContent className="p-4">
@@ -213,7 +189,7 @@ export default function InvoicesPage() {
         </div>
 
         {/* Content */}
-        {loading ? (
+        {isLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 4 }).map((_, i) => (
               <Card key={i}>
@@ -235,8 +211,8 @@ export default function InvoicesPage() {
         ) : error ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-              <p className="text-sm font-medium text-destructive">{error}</p>
-              <Button variant="outline" size="sm" className="mt-4" onClick={loadInvoices}>
+              <p className="text-sm font-medium text-destructive">{error.message}</p>
+              <Button variant="outline" size="sm" className="mt-4" onClick={() => refetch()}>
                 Retry
               </Button>
             </CardContent>
