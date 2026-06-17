@@ -4,6 +4,7 @@ import { use, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useClientUser } from "@/contexts/client-user-context";
 import { getContract, signContract, rejectContract, updateContract } from "@/lib/firebase/contracts";
+import { sanitizeHtml } from "@/lib/sanitize";
 import { Timestamp } from "firebase/firestore";
 import type { Contract } from "@/types";
 import { Badge } from "@/components/ui/badge";
@@ -225,7 +226,7 @@ function ClientContractDetailPage({ params }: { params: Promise<{ id: string }> 
         <CardContent className="p-6">
           <div
             className="prose prose-sm max-w-none"
-            dangerouslySetInnerHTML={{ __html: contract.content || "<p>No content yet.</p>" }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(contract.content) || "<p>No content yet.</p>" }}
           />
         </CardContent>
       </Card>

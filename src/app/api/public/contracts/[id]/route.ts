@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebase/admin";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 const CONTRACTS_COLLECTION = "contracts";
 
@@ -9,6 +10,15 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+
+    // Rate limit: 30 requests per IP per minute
+    const ip = getClientIp(req);
+    if (!checkRateLimit(`contract-public-${ip}`, 30, 60_000)) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429 }
+      );
+    }
 
     if (!id) {
       return NextResponse.json({ error: "Contract ID required" }, { status: 400 });

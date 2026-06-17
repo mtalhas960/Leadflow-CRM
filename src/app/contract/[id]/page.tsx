@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/lib/toast";
+import { sanitizeHtml } from "@/lib/sanitize";
 import {
   FileSignature,
   FileCheck,
@@ -187,7 +188,7 @@ export default function PublicContractPage({ params }: { params: Promise<{ id: s
             <div className="border-t pt-8">
               <div
                 className="prose prose-sm max-w-none"
-                dangerouslySetInnerHTML={{ __html: contract.content || "<p>No content.</p>" }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(contract.content) || "<p>No content.</p>" }}
               />
             </div>
 

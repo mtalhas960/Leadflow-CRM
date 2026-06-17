@@ -1,3 +1,4 @@
+import "server-only";
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth } from "@/lib/api/middleware";
 import { getAdminDb } from "@/lib/firebase/admin";

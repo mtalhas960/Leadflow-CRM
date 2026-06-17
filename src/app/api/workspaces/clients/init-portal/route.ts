@@ -1,3 +1,4 @@
+import "server-only";
 import { getAdminDb, getAdminAuth } from "@/lib/firebase/admin";
 import { Timestamp } from "firebase-admin/firestore";
 import { NextResponse } from "next/server";

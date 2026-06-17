@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { LinkEmbed } from "@/types";
+import { sanitizeEmbed } from "@/lib/sanitize";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Code, Eye, Copy, Check } from "lucide-react";
@@ -72,7 +73,7 @@ export function EmbedViewerModal({ embed, isOpen, onClose }: EmbedViewerModalPro
           ) : embed.embedCode ? (
             <div
               className="flex items-center justify-center min-h-[400px]"
-              dangerouslySetInnerHTML={{ __html: embed.embedCode }}
+              dangerouslySetInnerHTML={{ __html: sanitizeEmbed(embed.embedCode) }}
             />
           ) : (
             <div className="flex flex-col items-center justify-center min-h-[200px] text-muted-foreground">
